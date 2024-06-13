@@ -2,12 +2,11 @@
 #include <stdlib.h>
 #include "user_space.h"
 
-// User space memory allocation
-VirtualMemory allocate_user_space()
+VirtualMemory allocate_user_space(size_t space_size)
 {
     VirtualMemory vm;
 
-    vm.size = USER_SPACE_SIZE;
+    vm.size = space_size;
     vm.start_addr = malloc(vm.size);
 
     if (!vm.start_addr)
@@ -20,7 +19,6 @@ VirtualMemory allocate_user_space()
     return vm;
 }
 
-// Allocate multiple user spaces
 VirtualMemory* allocate_multiple_user_spaces(size_t count)
 {
     VirtualMemory* vm_array = (VirtualMemory*)malloc(count * sizeof(VirtualMemory));
@@ -32,7 +30,11 @@ VirtualMemory* allocate_multiple_user_spaces(size_t count)
 
     for (size_t i = 0; i < count; ++i)
     {
-        vm_array[i] = allocate_user_space();
+        size_t space_size;
+        printf("Enter the size of user space %zu in bytes: ", i);
+        scanf("%zu", &space_size);
+
+        vm_array[i] = allocate_user_space(space_size);
     }
 
     return vm_array;

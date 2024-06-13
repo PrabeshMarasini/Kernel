@@ -3,11 +3,8 @@
 
 #include <stddef.h>
 
-#define USER_SPACE_SIZE (1 << 30)  // 1 GB
-#define KERNEL_SPACE_SIZE (1 << 30)  // 1 GB
-
-typedef struct
-{
+// Define VirtualMemory struct
+typedef struct {
     void* start_addr;
     size_t size;
 } VirtualMemory;

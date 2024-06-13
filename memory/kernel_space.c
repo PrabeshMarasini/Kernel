@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include "kernel_space.h"
 
-// Kernel space memory allocation
+#define KERNEL_SPACE_SIZE (1 << 30)  // 1 GB, adjust as needed
+
 VirtualMemory allocate_kernel_space()
 {
     VirtualMemory vm;

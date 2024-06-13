@@ -3,6 +3,8 @@
 #include "user_space.h"
 #include "kernel_space.h"
 
+#define USER_SPACE_SIZE (1 << 30)  // 1 GB
+
 int main()
 {
     size_t num_user_spaces;
