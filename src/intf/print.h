@@ -32,5 +32,6 @@ void print_set_cursor(int x, int y);
 void print_enable_cursor(int cursor_start, int cursor_end);
 void print_disable_cursor();
 void print_update_cursor();
+void print_clear_screen();
 
 #endif

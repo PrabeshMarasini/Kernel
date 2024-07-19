@@ -1,4 +1,4 @@
-#include "print.h"
+#include "../intf/print.h"
 
 static int current_x = 0;
 static int current_y = 0;
@@ -84,4 +84,22 @@ void print_update_cursor() {
     outb(0x3D5, (unsigned char) (pos & 0xFF));
     outb(0x3D4, 0x0E);
     outb(0x3D5, (unsigned char) ((pos >> 8) & 0xFF));
+}
+
+void print_clear_screen() {
+    // Set color to white on black for clearing the screen
+    print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
+
+    // Clear the screen by filling with spaces
+    for (int y = 0; y < VGA_HEIGHT; y++) {
+        for (int x = 0; x < VGA_WIDTH; x++) {
+            const int index = y * VGA_WIDTH + x;
+            VGA_MEMORY[index] = (unsigned short)' ' | (unsigned short)(current_color << 8);
+        }
+    }
+
+    // Reset cursor position and update cursor on screen
+    current_x = 0;
+    current_y = 0;
+    print_update_cursor();
 }
