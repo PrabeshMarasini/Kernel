@@ -1,58 +1,69 @@
 #include "../intf/print.h"
 
-static int current_x = 0;
-static int current_y = 0;
+// VGA constants
+#define VGA_BUFFER 0xB8000
+#define VGA_WIDTH 80
+#define VGA_HEIGHT 25
+
+// Colors
+#define PRINT_COLOR_BLACK 0
+#define PRINT_COLOR_BLUE 1
+#define PRINT_COLOR_GREEN 2
+#define PRINT_COLOR_CYAN 3
+#define PRINT_COLOR_RED 4
+#define PRINT_COLOR_MAGENTA 5
+#define PRINT_COLOR_BROWN 6
+#define PRINT_COLOR_LIGHT_GRAY 7
+#define PRINT_COLOR_DARK_GRAY 8
+#define PRINT_COLOR_LIGHT_BLUE 9
+#define PRINT_COLOR_LIGHT_GREEN 10
+#define PRINT_COLOR_LIGHT_CYAN 11
+#define PRINT_COLOR_LIGHT_RED 12
+#define PRINT_COLOR_LIGHT_MAGENTA 13
+#define PRINT_COLOR_LIGHT_YELLOW 14
+#define PRINT_COLOR_WHITE 15
+
+// Global variables
 static int current_color = PRINT_COLOR_WHITE | (PRINT_COLOR_BLACK << 4);
+static int cursor_x = 0;
+static int cursor_y = 0;
 
-static unsigned short* const VGA_MEMORY = (unsigned short*)VGA_BUFFER;
+// Function prototypes
+static void outb(unsigned short port, unsigned char val);
+static unsigned char inb(unsigned short port);
 
-static void outb(unsigned short port, unsigned char val) {
-    asm volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
-}
-
-static unsigned char inb(unsigned short port) {
-    unsigned char ret;
-    asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
-    return ret;
-}
-
+// Print functions
 void print_clear() {
-    for (int y = 0; y < VGA_HEIGHT; y++) {
-        for (int x = 0; x < VGA_WIDTH; x++) {
-            const int index = y * VGA_WIDTH + x;
-            VGA_MEMORY[index] = (unsigned short)' ' | (unsigned short)(current_color << 8);
-        }
+    unsigned char* video_memory = (unsigned char*)VGA_BUFFER;
+    for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) {
+        *video_memory++ = ' ';
+        *video_memory++ = current_color;
     }
-    current_x = 0;
-    current_y = 0;
+    cursor_x = 0;
+    cursor_y = 0;
     print_update_cursor();
 }
 
 void print_char(char character) {
-    if (character == '\n') {
-        current_x = 0;
-        current_y++;
-    } else {
-        const int index = current_y * VGA_WIDTH + current_x;
-        VGA_MEMORY[index] = (unsigned short)character | (unsigned short)(current_color << 8);
-        current_x++;
+    unsigned char* video_memory = (unsigned char*)VGA_BUFFER;
+    int offset = (cursor_y * VGA_WIDTH + cursor_x) * 2;
+    video_memory[offset] = character;
+    video_memory[offset + 1] = current_color;
+    cursor_x++;
+    if (cursor_x >= VGA_WIDTH) {
+        cursor_x = 0;
+        cursor_y++;
+        if (cursor_y >= VGA_HEIGHT) {
+            // Implement scrolling here if needed
+            cursor_y = VGA_HEIGHT - 1;
+        }
     }
-
-    if (current_x >= VGA_WIDTH) {
-        current_x = 0;
-        current_y++;
-    }
-
-    if (current_y >= VGA_HEIGHT) {
-        print_clear();
-    }
-
     print_update_cursor();
 }
 
 void print_str(const char* string) {
-    for (int i = 0; string[i] != '\0'; i++) {
-        print_char(string[i]);
+    while (*string) {
+        print_char(*string++);
     }
 }
 
@@ -61,9 +72,18 @@ void print_set_color(int foreground, int background) {
 }
 
 void print_set_cursor(int x, int y) {
-    current_x = x;
-    current_y = y;
+    cursor_x = x;
+    cursor_y = y;
     print_update_cursor();
+}
+
+char print_char_at(int x, int y, char c) {
+    unsigned char* video_memory = (unsigned char*)VGA_BUFFER;
+    int offset = (y * VGA_WIDTH + x) * 2;
+    char old_char = video_memory[offset];
+    video_memory[offset] = c;
+    video_memory[offset + 1] = current_color;
+    return old_char;
 }
 
 void print_enable_cursor(int cursor_start, int cursor_end) {
@@ -79,7 +99,7 @@ void print_disable_cursor() {
 }
 
 void print_update_cursor() {
-    unsigned short pos = current_y * VGA_WIDTH + current_x;
+    unsigned short pos = cursor_y * VGA_WIDTH + cursor_x;
     outb(0x3D4, 0x0F);
     outb(0x3D5, (unsigned char) (pos & 0xFF));
     outb(0x3D4, 0x0E);
@@ -91,15 +111,28 @@ void print_clear_screen() {
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
 
     // Clear the screen by filling with spaces
+    unsigned char* video_memory = (unsigned char*)VGA_BUFFER;
     for (int y = 0; y < VGA_HEIGHT; y++) {
         for (int x = 0; x < VGA_WIDTH; x++) {
             const int index = y * VGA_WIDTH + x;
-            VGA_MEMORY[index] = (unsigned short)' ' | (unsigned short)(current_color << 8);
+            video_memory[index * 2] = ' ';
+            video_memory[index * 2 + 1] = current_color;
         }
     }
 
     // Reset cursor position and update cursor on screen
-    current_x = 0;
-    current_y = 0;
+    cursor_x = 0;
+    cursor_y = 0;
     print_update_cursor();
+}
+
+// Inline assembly functions for port I/O
+static void outb(unsigned short port, unsigned char val) {
+    asm volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
+}
+
+static unsigned char inb(unsigned short port) {
+    unsigned char ret;
+    asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
+    return ret;
 }

@@ -33,5 +33,6 @@ void print_enable_cursor(int cursor_start, int cursor_end);
 void print_disable_cursor();
 void print_update_cursor();
 void print_clear_screen();
+char print_char_at(int x, int y, char c);
 
 #endif

@@ -6,14 +6,18 @@ void run_shell();
 void kernel_main() {
     print_clear();
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
-    print_str("Kernel v1\n");
+    print_str("Kernel v1");
+
+    // Set cursor and print prompt
+    print_set_cursor(0, 1);
     print_str(">");
     print_enable_cursor(14, 15);
 
     init_keyboard();
 
-    int cursor_x = 0;
-    int cursor_y = 2;
+    int cursor_x = 1; 
+    int cursor_y = 1; 
+    print_set_cursor(cursor_x, cursor_y);
 
     char buffer[128];
     int buffer_index = 0;
@@ -23,12 +27,16 @@ void kernel_main() {
 
     while (1) {
         char c = keyboard_get_char();
-        
+
         if (c != 0) {
             if (c == '\b') {
                 if (buffer_index > 0) {
                     buffer_index--;
                     cursor_x--;
+                    if (cursor_x < 0) {
+                        cursor_y--;
+                        cursor_x = 79; // Move to the end of the previous line
+                    }
                     print_set_cursor(cursor_x, cursor_y);
                     print_char(' ');
                     print_set_cursor(cursor_x, cursor_y);
@@ -36,7 +44,9 @@ void kernel_main() {
             } else if (c == '\n') {
                 buffer[buffer_index] = '\0';
 
-                if (buffer_index == command_index && buffer_index == 5 && buffer[0] == 's' && buffer[1] == 'h' && buffer[2] == 'e' && buffer[3] == 'l' && buffer[4] == 'l') {
+                if (buffer_index == command_index && buffer_index == 5 &&
+                    buffer[0] == 's' && buffer[1] == 'h' && buffer[2] == 'e' &&
+                    buffer[3] == 'l' && buffer[4] == 'l') {
                     run_shell();
                 }
 
@@ -45,6 +55,7 @@ void kernel_main() {
                 cursor_y++;
                 cursor_x = 0;
                 print_set_cursor(cursor_x, cursor_y);
+                print_char('>'); // Re-print the prompt after a newline
             } else {
                 buffer[buffer_index++] = c;
                 print_char(c);
