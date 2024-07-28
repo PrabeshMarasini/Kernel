@@ -34,5 +34,6 @@ void print_disable_cursor();
 void print_update_cursor();
 void print_clear_screen();
 char print_char_at(int x, int y, char c);
+char print_get_char(int x, int y);  // Add this function declaration
 
-#endif
+#endif // PRINT_H

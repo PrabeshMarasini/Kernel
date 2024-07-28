@@ -1,101 +1,65 @@
-#include <stddef.h>
+#include "memory.h"
 #include <stdint.h>
 
-// Define memory pool size
-#define MEMORY_POOL_SIZE 1024 * 1024  // 1 MB
+#define HEAP_SIZE 0x100000 // 1 MB
+#define BLOCK_SIZE 0x1000 // 4 KB
 
-// Memory block structure
-typedef struct MemoryBlock {
-    size_t size;                 // Size of the block
-    int free;                    // Is the block free?
-    struct MemoryBlock* next;    // Next block in the list
-} MemoryBlock;
+static uint8_t heap[HEAP_SIZE]; // The heap area for dynamic memory allocation
+static uint32_t free_blocks = HEAP_SIZE / BLOCK_SIZE; // Total number of blocks in the heap
 
-// Memory pool
-static uint8_t memory_pool[MEMORY_POOL_SIZE];
+typedef struct Block {
+    uint32_t size; // Number of blocks
+    struct Block* next; // Pointer to the next block in the free list
+} Block;
 
-// Head of the free list
-static MemoryBlock* free_list = (MemoryBlock*)memory_pool;
+static Block* free_list = (Block*)heap; // Pointer to the start of the free list
 
-// Initialize the memory manager
-void init_memory_manager() {
-    free_list->size = MEMORY_POOL_SIZE - sizeof(MemoryBlock);
-    free_list->free = 1;
-    free_list->next = NULL;
+// Initialize the memory system
+void init_memory() {
+    free_list->size = free_blocks; // Set the size of the initial free block
+    free_list->next = NULL; // No other blocks in the list yet
 }
 
-// Split a block into two if it's too large
-void split_block(MemoryBlock* block, size_t size) {
-    MemoryBlock* new_block = (MemoryBlock*)((uint8_t*)block + sizeof(MemoryBlock) + size);
-    new_block->size = block->size - size - sizeof(MemoryBlock);
-    new_block->free = 1;
-    new_block->next = block->next;
-
-    block->size = size;
-    block->free = 0;
-    block->next = new_block;
-}
-
-// Allocate memory
+// Allocate memory of a given size
 void* kmalloc(size_t size) {
-    MemoryBlock* current = free_list;
+    Block* current = free_list;
+    Block* prev = NULL;
+
+    // Find a block that is large enough
     while (current) {
-        if (current->free && current->size >= size) {
-            if (current->size > size + sizeof(MemoryBlock)) {
-                split_block(current, size);
-            } else {
-                current->free = 0;
+        // Check if current block is large enough
+        if (current->size >= (size + sizeof(Block) + BLOCK_SIZE - 1) / BLOCK_SIZE) {
+            // Split the block if it's larger than needed
+            if (current->size > (size + sizeof(Block) + BLOCK_SIZE - 1) / BLOCK_SIZE) {
+                Block* new_block = (Block*)((uint8_t*)current + size + sizeof(Block));
+                new_block->size = current->size - (size + sizeof(Block) + BLOCK_SIZE - 1) / BLOCK_SIZE;
+                new_block->next = current->next;
+                current->size = (size + sizeof(Block) + BLOCK_SIZE - 1) / BLOCK_SIZE;
+                current->next = new_block;
             }
-            return (void*)((uint8_t*)current + sizeof(MemoryBlock));
+
+            // Remove the block from the free list
+            if (prev) {
+                prev->next = current->next;
+            } else {
+                free_list = current->next;
+            }
+
+            // Return the memory address after the block header
+            return (void*)((uint8_t*)current + sizeof(Block));
         }
+
+        // Move to the next block
+        prev = current;
         current = current->next;
     }
-    return NULL;  // No suitable block found
+
+    return NULL; // No sufficient block found
 }
 
-// Merge consecutive free blocks
-void merge_blocks() {
-    MemoryBlock* current = free_list;
-    while (current && current->next) {
-        if (current->free && current->next->free) {
-            current->size += current->next->size + sizeof(MemoryBlock);
-            current->next = current->next->next;
-        }
-        current = current->next;
-    }
-}
-
-// Free memory
+// Free previously allocated memory
 void kfree(void* ptr) {
-    if (!ptr) return;
-    
-    MemoryBlock* block = (MemoryBlock*)((uint8_t*)ptr - sizeof(MemoryBlock));
-    block->free = 1;
-    merge_blocks();
-}
-
-int main() {
-    init_memory_manager();
-    
-    // Example usage
-    void* ptr1 = kmalloc(256);
-    void* ptr2 = kmalloc(512);
-    
-    // Use allocated memory for something
-    // For example: storing data, creating data structures, etc.
-    // Example: memset(ptr1, 0, 256);  // Initialize memory to zero (if you include <string.h>)
-    
-    // Free the allocated memory when done
-    kfree(ptr1);
-    
-    void* ptr3 = kmalloc(128);
-
-    // Use allocated memory for something
-    // Example: strcpy(ptr3, "Hello, Kernel!");  // Copy string into allocated memory (if you include <string.h>)
-    
-    // Free the allocated memory when done
-    kfree(ptr2);
-    kfree(ptr3);
-
-    return 0;
+    Block* block = (Block*)((uint8_t*)ptr - sizeof(Block)); // Get the block header
+    block->next = free_list; // Insert the block at the beginning of the free list
+    free_list = block;
 }

@@ -126,6 +126,12 @@ void print_clear_screen() {
     print_update_cursor();
 }
 
+char print_get_char(int x, int y) {
+    if (x >= VGA_WIDTH || y >= VGA_HEIGHT) return '\0'; // Out of bounds check
+    unsigned char* video_memory = (unsigned char*)VGA_BUFFER;
+    return video_memory[(y * VGA_WIDTH + x) * 2]; // Get the character
+}
+
 // Inline assembly functions for port I/O
 static void outb(unsigned short port, unsigned char val) {
     asm volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
