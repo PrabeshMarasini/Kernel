@@ -21,9 +21,25 @@ void reset_screen() {
 }
 
 void kernel_main() {
+    // Fill the entire screen with blue
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLUE);
     fill_screen(PRINT_COLOR_BLUE);
+    
+    // Set the first line to white background
+    for (int x = 0; x < 80; x++) {
+        print_set_cursor(x, 0);
+        print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE);
+        print_char(' ');
+    }
+    
+    // Print "Kernel v1" in black on the white background
+    print_set_cursor(0, 0);
+    print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE);
     print_str("Kernel v1");
+    
+    // Reset color for the rest of the screen
+    print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLUE);
+    
     // Set cursor and print prompt
     print_set_cursor(0, 1);
     print_str(">");
