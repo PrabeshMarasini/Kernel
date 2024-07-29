@@ -142,3 +142,12 @@ static unsigned char inb(unsigned short port) {
     asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
+
+void print_get_cursor(int *x, int *y) {
+    if (x) {
+        *x = cursor_x;
+    }
+    if (y) {
+        *y = cursor_y;
+    }
+}

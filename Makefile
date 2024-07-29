@@ -1,36 +1,28 @@
 # Define source files
 kernel_source_files := $(shell find src/impl/kernel -name *.c)
 kernel_object_files := $(patsubst src/impl/kernel/%.c, build/kernel/%.o, $(kernel_source_files))
-
 x86_64_c_source_files := $(shell find src/impl/x86_64 -name *.c)
 x86_64_c_object_files := $(patsubst src/impl/x86_64/%.c, build/x86_64/%.o, $(x86_64_c_source_files))
-
 x86_64_asm_source_files := $(shell find src/impl/x86_64 -name *.asm)
 x86_64_asm_object_files := $(patsubst src/impl/x86_64/%.asm, build/x86_64/%.o, $(x86_64_asm_source_files))
-
 shell_source_files := $(shell find src/shell -name *.c)
 shell_object_files := $(patsubst src/shell/%.c, build/shell/%.o, $(shell_source_files))
-
 textfile_source_files := src/textfile/textfile.c
 textfile_object_files := build/textfile/textfile.o
-
-# Add filesystem source files
 filesystem_source_files := src/filesystem/filesystem.c
 filesystem_object_files := build/filesystem/filesystem.o
-
-# Add keyboard source files
 keyboard_source_files := $(shell find src/drivers/keyboard -name *.c)
 keyboard_object_files := $(patsubst src/drivers/keyboard/%.c, build/drivers/keyboard/%.o, $(keyboard_source_files))
-
-# Add memory source files
 memory_source_files := src/memory/memory.c
 memory_object_files := build/kernel/memory.o
+datetime_source_files := src/datetime/datetime.c
+datetime_object_files := build/datetime/datetime.o
 
 # Define all object files
 x86_64_object_files := $(x86_64_c_object_files) $(x86_64_asm_object_files)
-all_object_files := $(kernel_object_files) $(x86_64_object_files) $(shell_object_files) $(keyboard_object_files) $(textfile_object_files) $(filesystem_object_files) $(memory_object_files)
+all_object_files := $(kernel_object_files) $(x86_64_object_files) $(shell_object_files) $(keyboard_object_files) $(textfile_object_files) $(filesystem_object_files) $(memory_object_files) $(datetime_object_files)
 
-# Compilation rules for kernel, x86_64 C files, x86_64 assembly files, shell files, keyboard files, textfile files, filesystem files, and memory files
+# Compilation rules
 build/kernel/%.o: src/impl/kernel/%.c
 	mkdir -p $(dir $@)
 	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
@@ -60,6 +52,10 @@ build/filesystem/%.o: src/filesystem/%.c
 	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
 
 build/kernel/memory.o: src/memory/memory.c
+	mkdir -p $(dir $@)
+	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
+
+build/datetime/%.o: src/datetime/%.c
 	mkdir -p $(dir $@)
 	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
 
