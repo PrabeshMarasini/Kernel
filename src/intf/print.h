@@ -37,4 +37,5 @@ char print_char_at(int x, int y, char c);
 char print_get_char(int x, int y);
 void print_get_cursor(int *x, int *y);
 
+
 #endif // PRINT_H
