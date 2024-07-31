@@ -17,10 +17,12 @@ memory_source_files := src/memory/memory.c
 memory_object_files := build/kernel/memory.o
 datetime_source_files := src/datetime/datetime.c
 datetime_object_files := build/datetime/datetime.o
+e1000_source_files := $(shell find src/drivers/net/e1000 -name *.c)
+e1000_object_files := $(patsubst src/drivers/net/e1000/%.c, build/drivers/net/e1000/%.o, $(e1000_source_files))
 
 # Define all object files
 x86_64_object_files := $(x86_64_c_object_files) $(x86_64_asm_object_files)
-all_object_files := $(kernel_object_files) $(x86_64_object_files) $(shell_object_files) $(keyboard_object_files) $(textfile_object_files) $(filesystem_object_files) $(memory_object_files) $(datetime_object_files)
+all_object_files := $(kernel_object_files) $(x86_64_object_files) $(shell_object_files) $(keyboard_object_files) $(textfile_object_files) $(filesystem_object_files) $(memory_object_files) $(datetime_object_files) $(e1000_object_files)
 
 # Compilation rules
 build/kernel/%.o: src/impl/kernel/%.c
@@ -56,6 +58,10 @@ build/kernel/memory.o: src/memory/memory.c
 	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
 
 build/datetime/%.o: src/datetime/%.c
+	mkdir -p $(dir $@)
+	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
+
+build/drivers/net/e1000/%.o: src/drivers/net/e1000/%.c
 	mkdir -p $(dir $@)
 	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
 
