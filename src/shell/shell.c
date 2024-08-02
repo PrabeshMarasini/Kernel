@@ -22,7 +22,8 @@ volatile struct vga_char* terminal_buffer = (volatile struct vga_char*)0xB8000;
 static int cursor_x = 7;
 static int cursor_y = 1;
 
-// Function prototypes
+// Functions
+void kernel_main();
 void handle_special_keys(char key);
 void run_shell();
 void clear_line(int y);
@@ -100,12 +101,25 @@ void run_shell() {
                 buffer[buffer_index] = '\0';
                 print_char(' ');
                 cursor_y++;
-                
+
                 if (cursor_y >= SCREEN_HEIGHT) {
                     scroll_screen();
                 }
 
-                if (buffer_index >= 7 && strncmp(buffer, "create ", 7) == 0) {
+                else if (strncmp(buffer, "home", 4) == 0) {
+    kernel_main();  // Call kernel_main to execute the desired function
+    
+    cursor_y++;
+    if (cursor_y >= SCREEN_HEIGHT) {
+        scroll_screen();
+    }
+
+    print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
+    print_set_cursor(0, cursor_y);
+    print_str("Shell> ");
+    cursor_x = 7;
+}
+ else if (buffer_index >= 7 && strncmp(buffer, "create ", 7) == 0) {
                     const char *filename = &buffer[7];
                     display_loading_animation(filename);
                     int create_result = create_file(filename);
@@ -191,6 +205,7 @@ void run_shell() {
         }
     }
 }
+
 
 void clear_line(int y) {
     if (y > 0) {  // Don't clear the first line
