@@ -66,8 +66,13 @@ char keyboard_get_char() {
                 }
 
                 // Check for Ctrl + Shift + S
-                if (ctrl && shift && c == 's') {
+                if (ctrl && shift && (c == 's' || c == 'S')) {
                     return 0x1B; // Special code for Ctrl + Shift + S
+                }
+                
+                // If Ctrl is pressed, don't return any character
+                if (ctrl) {
+                    return 0;
                 }
             }
         }

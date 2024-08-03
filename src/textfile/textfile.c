@@ -2,15 +2,12 @@
 #include "../intf/print.h"
 #include "../drivers/keyboard/keyboard.h"
 #include "../filesystem/filesystem.h"
-#include "../shell/shell.h" 
+#include "../shell/shell.h"
 
 #define SCREEN_HEIGHT 25
 #define SCREEN_WIDTH 80
 #define MAX_INPUT 1000
 #define BUFFER_SIZE 4096
-
-// Function prototype for switch_to_shell
-extern void switch_to_shell();  // Ensure this is declared in an appropriate header file
 
 void display_textfile(const char *filename) {
     char input[MAX_INPUT] = {0};
@@ -100,9 +97,16 @@ void display_textfile(const char *filename) {
         print_set_cursor(cursor_x, cursor_y);
         key = keyboard_get_char();
 
-        if (key == 0x1B) {
-            // Handle Ctrl + Shift + S special code here
-            switch_to_shell();  // Call the function to switch to the shell
+        if (key == 0x1B) {  // Escape key
+            // Clear the screen
+            print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE);
+            for (int i = 0; i < SCREEN_HEIGHT; ++i) {
+                for (int j = 0; j < SCREEN_WIDTH; ++j) {
+                    print_set_cursor(j, i);
+                    print_char(' ');
+                }
+            }
+            run_shell();  // Call the function to switch to the shell
             return;  // Exit display_textfile function
         } else if (key == '\n') {
             cursor_y++;

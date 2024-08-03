@@ -4,6 +4,8 @@
 #include "../filesystem/filesystem.h"
 #include <string.h>
 #include <stdlib.h>
+#include "shell.h"
+#include "../datetime/datetime.h"
 
 #define SCREEN_HEIGHT 25  
 #define SCREEN_WIDTH 80
@@ -71,141 +73,146 @@ void handle_special_keys(char key) {
     }
 }
 
-void run_shell() {
-    print_clear();
-    set_first_line_color();
-    print_set_cursor(0, 1);
-    print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
-    print_str("Shell> ");
-    print_enable_cursor(14, 15);
-    cursor_y = 1;
-    cursor_x = 7;
-
-    char buffer[128];
-    int buffer_index = 0;
-
-    while (1) {
-        char c = keyboard_get_char();
-        if (c != 0) {
-            if (c == '\b') {
-                if (buffer_index > 0) {
-                    buffer_index--;
-                    if (cursor_x > 7) {
-                        cursor_x--;
-                        print_set_cursor(cursor_x, cursor_y);
-                        print_char(' ');
-                        print_set_cursor(cursor_x, cursor_y);
-                    }
-                }
-            } else if (c == '\n') {
-                buffer[buffer_index] = '\0';
-                print_char(' ');
-                cursor_y++;
-
-                if (cursor_y >= SCREEN_HEIGHT) {
-                    scroll_screen();
-                }
-
-                else if (strncmp(buffer, "home", 4) == 0) {
-    kernel_main();  // Call kernel_main to execute the desired function
-    
-    cursor_y++;
-    if (cursor_y >= SCREEN_HEIGHT) {
-        scroll_screen();
-    }
-
+// Date and Time Function
+void display_time() {
+    struct tm time = get_rtc_time();
+    adjust_time_for_nepal(&time);
+    print_set_color(PRINT_COLOR_CYAN, PRINT_COLOR_BLACK);
+    print_set_cursor(0, 1);  // Display on the second line
+    print_time(&time);
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
     print_set_cursor(0, cursor_y);
-    print_str("Shell> ");
-    cursor_x = 7;
 }
- else if (buffer_index >= 7 && strncmp(buffer, "create ", 7) == 0) {
-                    const char *filename = &buffer[7];
-                    display_loading_animation(filename);
-                    int create_result = create_file(filename);
 
-                    if (create_result == 0) {
-                        print_line_with_color(0, cursor_y, "File created: ", PRINT_COLOR_GREEN, PRINT_COLOR_BLACK);
-                        print_str(filename);
-                    } else if (create_result == -1) {
-                        print_line_with_color(0, cursor_y, "Error: ", PRINT_COLOR_RED, PRINT_COLOR_BLACK);
-                        print_str(filename);
-                        print_str(" already exists");
+void clear_time_line() {
+    print_set_cursor(0, 1);  // Assuming the time is displayed on the second line
+    for (int i = 0; i < SCREEN_WIDTH; i++) {
+        print_char(' ');
+    }
+}
+
+
+void run_shell() {
+    while (1) {
+        // Clear the screen and reset cursor position
+        print_clear();
+        set_first_line_color();
+        print_set_cursor(0, 1);
+        print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
+        print_str("Shell> ");
+        print_enable_cursor(14, 15);
+        cursor_y = 1;
+        cursor_x = 7;
+
+        char buffer[128];
+        int buffer_index = 0;
+
+        while (1) {
+            char c = keyboard_get_char();
+
+            if (c != 0) {
+                if (c == '\b') {
+                    if (buffer_index > 0) {
+                        buffer_index--;
+                        if (cursor_x > 7) {
+                            cursor_x--;
+                            print_set_cursor(cursor_x, cursor_y);
+                            print_char(' ');
+                            print_set_cursor(cursor_x, cursor_y);
+                        }
+                    }
+                } else if (c == '\n') {
+                    buffer[buffer_index] = '\0';
+                    print_char(' ');
+                    cursor_y++;
+
+                    if (cursor_y >= SCREEN_HEIGHT) {
+                        scroll_screen();
+                    }
+
+                    if (strncmp(buffer, "dt", 2) == 0) {
+                        // Move cursor to a new line for the date/time
+                        cursor_y++;
+                        if (cursor_y >= SCREEN_HEIGHT) {
+                            scroll_screen();
+                        }
+                        print_set_cursor(0, cursor_y);
+
+                        // Display current date and time
+                        struct tm time = get_rtc_time();
+                        char time_str[32];
+                        simple_snprintf(time_str, time.tm_year + 1900, time.tm_mon + 1, time.tm_mday,
+                                        time.tm_hour, time.tm_min, time.tm_sec);
+                        print_str(time_str);
+
+                        cursor_y++;
+                        if (cursor_y >= SCREEN_HEIGHT) {
+                            scroll_screen();
+                        }
+
+                        // Print the shell prompt again on the next line
+                        print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
+                        print_set_cursor(0, cursor_y);
+                        print_str("Shell> ");
+                        cursor_x = 7;
+                        buffer_index = 0; // Reset buffer index after command
+                    } else if (strncmp(buffer, "home", 4) == 0) {
+                        kernel_main();  // Call kernel_main to execute the desired function
+                        break;  // Exit the inner loop to refresh the shell
+                    } else if (buffer_index >= 7 && strncmp(buffer, "create ", 7) == 0) {
+                        const char *filename = &buffer[7];
+                        display_loading_animation(filename);
+                        int create_result = create_file(filename);
+
+                        if (create_result == 0) {
+                            print_line_with_color(0, cursor_y, "File created: ", PRINT_COLOR_GREEN, PRINT_COLOR_BLACK);
+                            print_str(filename);
+                        } else if (create_result == -1) {
+                            print_line_with_color(0, cursor_y, "Error: ", PRINT_COLOR_RED, PRINT_COLOR_BLACK);
+                            print_str(filename);
+                            print_str(" already exists");
+                        } else {
+                            print_line_with_color(0, cursor_y, "Error: File ", PRINT_COLOR_RED, PRINT_COLOR_BLACK);
+                            print_str(filename);
+                            print_str(" could not be created");
+                        }
+                    } else if (strncmp(buffer, "list_files", 10) == 0) {
+                        list_files_command();
+                    } else if (strncmp(buffer, "open ", 5) == 0) {
+                        const char *filename = &buffer[5];
+                        open_file_command(filename);
+                    } else if (strncmp(buffer, "delete ", 7) == 0) {
+                        const char *filename = &buffer[7];
+                        delete_file_command(filename);
                     } else {
-                        print_line_with_color(0, cursor_y, "Error: File ", PRINT_COLOR_RED, PRINT_COLOR_BLACK);
-                        print_str(filename);
-                        print_str(" could not be created");
+                        clear_line(cursor_y);
+                        print_set_cursor(0, cursor_y);
+                        print_line_with_color(0, cursor_y, "Unknown command: ", PRINT_COLOR_RED, PRINT_COLOR_BLACK);
+                        print_str(buffer);
                     }
 
                     cursor_y++;
                     if (cursor_y >= SCREEN_HEIGHT) {
                         scroll_screen();
                     }
+
+                    // Print the shell prompt again
                     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
                     print_set_cursor(0, cursor_y);
                     print_str("Shell> ");
                     cursor_x = 7;
-                } else if (strncmp(buffer, "list_files", 10) == 0) {
-                    list_files_command();
-                    
-                    if (cursor_y >= SCREEN_HEIGHT) {
-                        scroll_screen();
-                    }
-                    print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
-                    print_set_cursor(0, cursor_y);
-                    print_str("Shell> ");
-                    cursor_x = 7;
-                } else if (strncmp(buffer, "open ", 5) == 0) {
-                    const char *filename = &buffer[5];
-                    open_file_command(filename);
-                    
-                    if (cursor_y >= SCREEN_HEIGHT) {
-                        scroll_screen();
-                    }
-                    print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
-                    print_set_cursor(0, cursor_y);
-                    print_str("Shell> ");
-                    cursor_x = 7;
-                } else if (strncmp(buffer, "delete ", 7) == 0) {
-                    const char *filename = &buffer[7];
-                    delete_file_command(filename);
-                    
-                    if (cursor_y >= SCREEN_HEIGHT) {
-                        scroll_screen();
-                    }
-                    print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
-                    print_set_cursor(0, cursor_y);
-                    print_str("Shell> ");
-                    cursor_x = 7;
+                    buffer_index = 0; // Reset buffer index
                 } else {
-                    clear_line(cursor_y);
-
-                    print_set_cursor(0, cursor_y);
-                    print_line_with_color(0, cursor_y, "Unknown command: ", PRINT_COLOR_RED, PRINT_COLOR_BLACK);
-                    print_str(buffer);
-                    
-                    cursor_y++;
-                    if (cursor_y >= SCREEN_HEIGHT) {
-                        scroll_screen();
+                    if (buffer_index < sizeof(buffer) - 1 && cursor_x < SCREEN_WIDTH - 1) {
+                        buffer[buffer_index++] = c;
+                        print_char(c);
+                        cursor_x++;
                     }
-                    print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
-                    print_set_cursor(0, cursor_y);
-                    print_str("Shell> ");
-                    cursor_x = 7;
-                }
-                
-                buffer_index = 0;
-            } else {
-                if (buffer_index < sizeof(buffer) - 1 && cursor_x < SCREEN_WIDTH - 1) {
-                    buffer[buffer_index++] = c;
-                    print_char(c);
-                    cursor_x++;
                 }
             }
         }
     }
 }
-
 
 void clear_line(int y) {
     if (y > 0) {  // Don't clear the first line
@@ -260,17 +267,17 @@ void scroll_screen() {
 }
 
 void list_files_command() {
-    char *files = list_files();  // Assuming list_files() returns a string with filenames
-    if (files != NULL) {
+    char *files = list_files();  // Assuming list_files() returns a string with filenames or NULL
+    if (files != NULL && strlen(files) > 0) {
         char *file = strtok(files, "\n");
         while (file != NULL) {
             print_set_color(PRINT_COLOR_YELLOW, PRINT_COLOR_BLACK);
             print_set_cursor(0, cursor_y);
-            
+
             if (strncmp(file, "File: ", 6) == 0) {
                 file += 6;
             }
-            
+
             print_str(file);
             cursor_y++;
             if (cursor_y >= SCREEN_HEIGHT) {
@@ -280,18 +287,19 @@ void list_files_command() {
         }
         free(files);
     } else {
-        print_line_with_color(0, cursor_y, "Error: Unable to retrieve file list", PRINT_COLOR_RED, PRINT_COLOR_BLACK);
+        print_line_with_color(0, cursor_y, "No files found!", PRINT_COLOR_RED, PRINT_COLOR_BLACK);
         cursor_y++;
         if (cursor_y >= SCREEN_HEIGHT) {
             scroll_screen();
         }
     }
-    
+
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
     print_set_cursor(0, cursor_y);
     print_str("Shell> ");
     cursor_x = 7;
 }
+
 
 void open_file_command(const char *filename) {
     // Check if the file exists
