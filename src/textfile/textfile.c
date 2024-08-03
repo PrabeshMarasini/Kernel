@@ -9,6 +9,8 @@
 #define MAX_INPUT 1000
 #define BUFFER_SIZE 4096
 
+void reset_screen(void);
+
 void display_textfile(const char *filename) {
     char input[MAX_INPUT] = {0};
     int input_length = 0;
@@ -106,6 +108,7 @@ void display_textfile(const char *filename) {
                     print_char(' ');
                 }
             }
+            reset_screen(); // Ensure screen colors are reset
             run_shell();  // Call the function to switch to the shell
             return;  // Exit display_textfile function
         } else if (key == '\n') {

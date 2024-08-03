@@ -262,17 +262,19 @@ void fs_close(File* file) {
 char* list_files() {
     static char buffer[4096];
     int pos = 0;
+    buffer[0] = '\0'; // Ensure buffer is initially empty
+
     for (int i = 0; i < MAX_FILES; i++) {
-        if (root_dir[i].name[0] != '\0') {
+        if (root_dir[i].name[0] != '\0') { // Only include valid files
             pos += custom_snprintf(buffer + pos, sizeof(buffer) - pos, "File: %s\n", root_dir[i].name);
         }
     }
+
     return buffer;
 }
 
 // Custom snprintf implementation (simplified)
 int custom_snprintf(char* str, size_t size, const char* format, ...) {
-    // This is a very basic implementation. You might want to expand it based on your needs.
     size_t written = 0;
     const char* ptr = format;
     va_list args;
