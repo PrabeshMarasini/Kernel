@@ -65,11 +65,16 @@ char keyboard_get_char() {
                     c = keymap[scancode];
                 }
 
+                // Check for Ctrl + S
+                if (ctrl && !shift && (c == 's' || c == 'S')) {
+                    return 0x13; // ASCII code for Ctrl + S
+                }
+                
                 // Check for Ctrl + Shift + S
                 if (ctrl && shift && (c == 's' || c == 'S')) {
                     return 0x1B; // Special code for Ctrl + Shift + S
                 }
-                
+
                 // If Ctrl is pressed, don't return any character
                 if (ctrl) {
                     return 0;
@@ -84,8 +89,11 @@ char keyboard_get_char() {
 void handle_keypress() {
     char c = keyboard_get_char();
     if (c == 0x1B) {
-        // Handle Ctrl + Shift + S special code here
+        // Handle Ctrl + Shift + S (switch to shell)
         switch_to_shell();  // Ensure this function is declared and defined globally
+    } else if (c == 0x13) {
+        // Handle Ctrl + S (save file)
+        save_current_file(); // Ensure this function is declared and defined globally
     } else if (c != 0) {
         print_char(c);  // Print the character
     }

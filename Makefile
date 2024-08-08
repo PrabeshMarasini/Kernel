@@ -81,4 +81,9 @@ build-textfile: $(textfile_object_files)
 # Run target to execute kernel in QEMU
 .PHONY: run
 run: build-x86_64
-	qemu-system-x86_64 -cdrom dist/x86_64/kernel.iso
+	qemu-system-x86_64 \
+		-d int \
+		-cdrom dist/x86_64/kernel.iso \
+		-D qemu.log
+
+

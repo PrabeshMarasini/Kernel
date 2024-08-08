@@ -42,10 +42,11 @@ int create_file(const char* name);
 int delete_file(const char* name);
 int write_file(const char* name, const uint8_t* data, uint32_t size);
 int read_file(const char* name, uint8_t* buffer, uint32_t size);
-int file_exists(const char *filename);
-File* fs_open(const char *filename);
-size_t fs_read(File *file, char *buffer, size_t size);
-void fs_close(File *file);
+int file_exists(const char* name);
+File* fs_open(const char* name);
+size_t fs_read(File* file, char* buffer, size_t size);
+size_t fs_write(File* file, const char* buffer, size_t size);
+void fs_close(File* file);
 char* list_files();
 
 #endif // FILESYSTEM_H
