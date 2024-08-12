@@ -58,6 +58,9 @@ char keyboard_get_char() {
                 shift = 1;
             } else if (scancode == LCTRL || scancode == RCTRL) {
                 ctrl = 1;
+            } else if (scancode == UP_ARROW || scancode == DOWN_ARROW || scancode == LEFT_ARROW || scancode == RIGHT_ARROW) {
+                // Arrow keys detected; handle them as needed later
+                c = scancode;  // Return the scan code itself for now
             } else {
                 if (shift) {
                     c = shift_keymap[scancode];
@@ -94,6 +97,10 @@ void handle_keypress() {
     } else if (c == 0x13) {
         // Handle Ctrl + S (save file)
         save_current_file(); // Ensure this function is declared and defined globally
+    } else if (c == UP_ARROW || c == DOWN_ARROW || c == LEFT_ARROW || c == RIGHT_ARROW) {
+        // Handle arrow keys as needed later
+        // For now, just print the scan code
+        print_char('^');  // For example, print a caret symbol as a placeholder
     } else if (c != 0) {
         print_char(c);  // Print the character
     }

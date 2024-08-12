@@ -10,6 +10,11 @@
 #define SCREEN_HEIGHT 25
 #define SCREEN_WIDTH 80
 #define MAX_INPUT 1000
+#define HISTORY_SIZE 100
+
+static char command_history[HISTORY_SIZE][MAX_INPUT] = {0};
+static int history_count = 0;
+static int history_index = -1;
 
 // Define the VGA character structure
 struct vga_char
@@ -40,6 +45,7 @@ void set_first_line_color();
 void start_shell();
 void create_file_command(const char *filename);
 void dt_command(void);
+void handle_command_history(char key, char *buffer, int *buffer_index);
 
 void handle_special_keys(char key)
 {
@@ -118,7 +124,7 @@ void run_shell()
         cursor_y = 1;
         cursor_x = strlen(prompt);
 
-        char buffer[128];
+        char buffer[MAX_INPUT] = {0};
         int buffer_index = 0;
 
         while (1)
@@ -152,23 +158,27 @@ void run_shell()
                         scroll_screen();
                     }
 
+                    // Add command to history
+                    if (buffer_index > 0)
+                    {
+                        strncpy(command_history[history_count % HISTORY_SIZE], buffer, MAX_INPUT);
+                        history_count++;
+                        history_index = history_count;
+                    }
+
                     // Handle commands
                     if (strncmp(buffer, "dt", 2) == 0)
                     {
-                        dt_command(); // Call the new function for dt command
-                        // No need to continue the loop, as dt_command already handles prompt printing
-                        buffer_index = 0;
-                        continue; // Skip the default prompt print below
+                        dt_command();
                     }
                     else if (strncmp(buffer, "home", 4) == 0)
                     {
-                        kernel_main(); // Call kernel_main to execute the desired function
-                        break;         // Exit the inner loop to refresh the shell
+                        kernel_main();
+                        break;
                     }
                     else if (strncmp(buffer, "create ", 7) == 0)
                     {
-                        const char *filename = &buffer[7];
-                        create_file_command(filename); // Call the new function
+                        create_file_command(&buffer[7]);
                     }
                     else if (strncmp(buffer, "list_files", 10) == 0)
                     {
@@ -176,26 +186,22 @@ void run_shell()
                     }
                     else if (strncmp(buffer, "open ", 5) == 0)
                     {
-                        const char *filename = &buffer[5];
-                        open_file_command(filename);
+                        open_file_command(&buffer[5]);
                     }
                     else if (strncmp(buffer, "delete ", 7) == 0)
                     {
-                        const char *filename = &buffer[7];
-                        delete_file_command(filename);
+                        delete_file_command(&buffer[7]);
                     }
                     else if (strncmp(buffer, "clr", 3) == 0)
                     {
-                        // Clear screen and restart shell
                         print_clear();
-                        start_shell();
-                        return; // Exit the inner loop to restart the shell
+                        cursor_y = 1;
                     }
-                    else
+                    else if (buffer_index > 0)
                     {
-                        clear_line(cursor_y); // Clear the current line
+                        print_set_color(PRINT_COLOR_RED, PRINT_COLOR_BLACK);
                         print_set_cursor(0, cursor_y);
-                        print_line_with_color(0, cursor_y, "Unknown command: ", PRINT_COLOR_RED, PRINT_COLOR_BLACK);
+                        print_str("Unknown command: ");
                         print_str(buffer);
                         cursor_y++;
                         if (cursor_y >= SCREEN_HEIGHT)
@@ -204,20 +210,23 @@ void run_shell()
                         }
                     }
 
-                    // Ensure the prompt is printed only once and in the correct position
-                    cursor_x = 0; // Move cursor to the beginning of the line
+                    // Reset buffer and cursor for next command
+                    buffer_index = 0;
+                    cursor_x = 0;
                     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
                     print_set_cursor(cursor_x, cursor_y);
                     print_str(prompt);
                     cursor_x = strlen(prompt);
-
-                    // Reset buffer index after command processing
-                    buffer_index = 0;
+                }
+                else if (c == UP_ARROW || c == DOWN_ARROW)
+                {
+                    // Handle command history navigation
+                    handle_command_history(c, buffer, &buffer_index);
                 }
                 else
                 {
                     // Handle character input
-                    if (buffer_index < sizeof(buffer) - 1 && cursor_x < SCREEN_WIDTH - 1)
+                    if (buffer_index < MAX_INPUT - 1 && cursor_x < SCREEN_WIDTH - 1)
                     {
                         buffer[buffer_index++] = c;
                         print_char(c);
@@ -228,6 +237,59 @@ void run_shell()
         }
     }
 }
+
+
+// Handle command history navigation
+void handle_command_history(char key, char *buffer, int *buffer_index)
+{
+    if (key == UP_ARROW)
+    {
+        if (history_index > 0)
+        {
+            history_index--;
+        }
+    }
+    else if (key == DOWN_ARROW)
+    {
+        if (history_index < history_count)
+        {
+            history_index++;
+        }
+    }
+
+    // Clear the current input line
+    while (cursor_x > strlen("Shell> "))
+    {
+        cursor_x--;
+        print_set_cursor(cursor_x, cursor_y);
+        print_char(' ');
+    }
+
+    // Reset cursor to start of input
+    cursor_x = strlen("Shell> ");
+    print_set_cursor(cursor_x, cursor_y);
+
+    // Copy the selected history command to the buffer
+    if (history_index >= 0 && history_index < history_count)
+    {
+        strncpy(buffer, command_history[history_index % HISTORY_SIZE], MAX_INPUT);
+        *buffer_index = strlen(buffer);
+        print_str(buffer);
+        cursor_x += *buffer_index;
+    }
+    else
+    {
+        *buffer_index = 0;
+        buffer[0] = '\0';
+    }
+
+    // Ensure cursor is at the end of the command
+    print_set_cursor(cursor_x, cursor_y);
+}
+
+
+
+
 
 void clear_line(int y)
 {
