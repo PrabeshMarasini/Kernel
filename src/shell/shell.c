@@ -106,6 +106,18 @@ void display_time()
     print_set_cursor(0, cursor_y);
 }
 
+void clear_screen_but_keep_first_line()
+{
+    for (int y = 1; y < SCREEN_HEIGHT; y++) // Start from the second line (y = 1)
+    {
+        clear_line(y);
+    }
+
+    cursor_x = 0;
+    cursor_y = 1; // Set cursor to the start of the second line
+    print_set_cursor(cursor_x, cursor_y);
+}
+
 void run_shell()
 {
     const char *prompt = "Shell> ";
@@ -194,8 +206,7 @@ void run_shell()
                     }
                     else if (strncmp(buffer, "clr", 3) == 0)
                     {
-                        print_clear();
-                        cursor_y = 1;
+                        clear_screen_but_keep_first_line();
                     }
                     else if (buffer_index > 0)
                     {
@@ -237,6 +248,7 @@ void run_shell()
         }
     }
 }
+
 
 
 // Handle command history navigation
