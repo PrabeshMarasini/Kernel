@@ -1,10 +1,21 @@
 #include "paging.h"
+#include "memory.h"  // Include memory.h for kmalloc and kfree
 
-pde_t page_directory[1024] __attribute__((aligned(4096)));
-pte_t first_page_table[1024] __attribute__((aligned(4096)));
+pde_t *page_directory; // Removed __attribute__((aligned(4096)))
+pte_t *first_page_table; // Removed __attribute__((aligned(4096)))
 
 // Initialize paging
 void init_paging() {
+    // Dynamically allocate the page directory and first page table
+    page_directory = (pde_t *)kmalloc(1024 * sizeof(pde_t));
+    first_page_table = (pte_t *)kmalloc(1024 * sizeof(pte_t));
+
+    if (!page_directory || !first_page_table) {
+        // Handle memory allocation failure
+        // Add your error handling code here (e.g., panic)
+        return;
+    }
+
     // Initialize page directory and page table entries
     for (int i = 0; i < 1024; i++) {
         page_directory[i].present = 0;
@@ -40,4 +51,10 @@ void init_paging() {
     // Expand the paging capabilities as needed
     // You can add support for additional page tables and page directory entries
     // to handle more than 4 MB of memory
+}
+
+// Optional: If you're done with paging and need to clean up, you can free the page_directory and first_page_table
+void cleanup_paging() {
+    kfree(page_directory);
+    kfree(first_page_table);
 }
