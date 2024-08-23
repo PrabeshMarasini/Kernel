@@ -3,12 +3,7 @@
 
 #include <stddef.h>  // For size_t
 #include "string.h"  // For memset
-
-// Memory block structure for managing free blocks
-typedef struct Block {
-    size_t size;
-    struct Block *next;
-} Block;
+#include "../memory/memory.h"
 
 // Function prototypes
 void *malloc(size_t size);
@@ -16,8 +11,6 @@ void free(void *ptr);
 void *realloc(void *ptr, size_t size);
 void *calloc(size_t nmemb, size_t size);
 
-// Constants
-#define HEAP_SIZE 1024 * 1024  // Define the size of the heap (1 MB)
 
 // Static heap and free list initialization
 static char heap[HEAP_SIZE];

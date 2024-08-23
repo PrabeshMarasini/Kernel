@@ -192,7 +192,7 @@ void run_shell()
                     {
                         create_file_command(&buffer[7]);
                     }
-                    else if (strncmp(buffer, "list_files", 10) == 0)
+                    else if (strncmp(buffer, "ls", 10) == 0)
                     {
                         list_files_command();
                     }

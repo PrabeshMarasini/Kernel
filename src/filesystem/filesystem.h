@@ -48,5 +48,6 @@ size_t fs_read(File* file, char* buffer, size_t size);
 size_t fs_write(File* file, const char* buffer, size_t size);
 void fs_close(File* file);
 char* list_files();
+int save_file(const char* name, const uint8_t* data, uint32_t size);
 
 #endif // FILESYSTEM_H

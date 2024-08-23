@@ -167,6 +167,59 @@ int write_file(const char* name, const uint8_t* data, uint32_t size) {
     return -1; // File not found
 }
 
+// Function to save a file's content
+int save_file(const char* name, const uint8_t* data, uint32_t size) {
+    // Check if the file exists
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (strncmp(root_dir[i].name, name, 32) == 0) {
+            inode_t* inode = &inodes[root_dir[i].inode];
+            uint32_t remaining_size = size;
+            uint32_t block_index = 0;
+            uint32_t data_index = 0;
+
+            // Save data to direct blocks
+            while (remaining_size > 0 && block_index < NUM_DIRECT_BLOCKS) {
+                if (inode->blocks[block_index] == 0) {
+                    inode->blocks[block_index] = allocate_block();
+                }
+                uint32_t write_size = FS_BLOCK_SIZE - (data_index % FS_BLOCK_SIZE);
+                if (write_size > remaining_size) {
+                    write_size = remaining_size;
+                }
+                memcpy(&data_blocks[inode->blocks[block_index]] + (data_index % FS_BLOCK_SIZE), data + data_index, write_size);
+                data_index += write_size;
+                remaining_size -= write_size;
+                block_index++;
+            }
+
+            // Save data to indirect blocks if needed
+            if (remaining_size > 0) {
+                if (inode->indirect_block == 0) {
+                    inode->indirect_block = allocate_block();
+                }
+                uint32_t* indirect_block = (uint32_t*)&data_blocks[inode->indirect_block];
+
+                for (int j = 0; j < BLOCK_POINTERS_PER_BLOCK && remaining_size > 0; j++) {
+                    if (indirect_block[j] == 0) {
+                        indirect_block[j] = allocate_block();
+                    }
+                    uint32_t write_size = FS_BLOCK_SIZE;
+                    if (write_size > remaining_size) {
+                        write_size = remaining_size;
+                    }
+                    memcpy(&data_blocks[indirect_block[j]], data + data_index, write_size);
+                    data_index += write_size;
+                    remaining_size -= write_size;
+                }
+            }
+
+            inode->size = size;
+            return 0; // Success
+        }
+    }
+    return -1; // File not found
+}
+
 // Function to read from a file
 int read_file(const char* name, uint8_t* buffer, uint32_t size) {
     for (int i = 0; i < MAX_FILES; i++) {

@@ -6,7 +6,7 @@
 
 #define SCREEN_HEIGHT 25
 #define SCREEN_WIDTH 80
-#define MAX_INPUT 1000
+#define MAX_INPUT 2000
 #define BUFFER_SIZE 4096
 
 void clear_and_reset_screen(void);
@@ -28,10 +28,10 @@ void clear_screen(void) {
 
 // Function to scroll the screen up by one line
 void textfile_scroll_screen(void) {
-    for (int y = 2; y < SCREEN_HEIGHT - 1; ++y) {
+    for (int y = 1; y < SCREEN_HEIGHT; ++y) {
         for (int x = 0; x < SCREEN_WIDTH; ++x) {
-            print_set_cursor(x, y);
-            char ch = print_get_char(x, y + 1);
+            print_set_cursor(x, y - 1);
+            char ch = print_get_char(x, y);
             print_char(ch);
         }
     }
@@ -156,18 +156,18 @@ void display_save_message(const char *message) {
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLUE); // White text on blue background
     int popup_start_x = (SCREEN_WIDTH - 30) / 2; // Center the popup horizontally
     int popup_start_y = (SCREEN_HEIGHT - 3) / 2; // Center the popup vertically
-    print_set_cursor(popup_start_x, popup_start_y);
-    for (int i = 0; i < 30; ++i) {
-        print_char(' '); // Top border
+    
+    // Top border of the dialog box
+    for (int y = 0; y < 3; ++y) {
+        print_set_cursor(popup_start_x, popup_start_y + y);
+        for (int i = 0; i < 30; ++i) {
+            print_char(' '); // Fill the entire line with spaces
+        }
     }
-    print_set_cursor(popup_start_x, popup_start_y + 1);
-    print_char(' ');
+
+    // Print the message at the center
+    print_set_cursor(popup_start_x + 1, popup_start_y + 1); // Adjust for border
     print_str(message);
-    print_char(' ');
-    print_set_cursor(popup_start_x, popup_start_y + 2);
-    for (int i = 0; i < 30; ++i) {
-        print_char(' '); // Bottom border
-    }
 
     // Wait for 5 seconds before clearing the popup
     delay(80000);
@@ -245,14 +245,15 @@ void display_textfile(const char *filename) {
             run_shell();  // Call the function to switch to the shell
             return;  // Exit display_textfile function
         } else if (key == '\n') {
-            if (input_length < MAX_INPUT - 1) { // Ensure buffer has space
-                input[input_length++] = key;  // Store the input
-                cursor_y++;
-                cursor_x = 0;
-                if (cursor_y >= SCREEN_HEIGHT) {
-                    textfile_scroll_screen();
-                    cursor_y = SCREEN_HEIGHT - 1;
-                }
+            // Handle newline
+            cursor_y++;
+            cursor_x = 0;
+            if (cursor_y >= SCREEN_HEIGHT) {
+                textfile_scroll_screen();
+                cursor_y = SCREEN_HEIGHT - 1;
+            }
+            if (input_length < MAX_INPUT - 1) {
+                input[input_length++] = key; // Store the input
             }
         } else if (key == '\b' && input_length > 0) {
             input[--input_length] = '\0';
