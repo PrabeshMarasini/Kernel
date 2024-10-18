@@ -3,10 +3,14 @@
 
 #include <stdint.h>
 
-#define SECTOR_SIZE 512
+#define ATA_PRIMARY_IO 0x1F0      // Base I/O port for the primary ATA bus
+#define ATA_PRIMARY_CTRL 0x3F6    // Control port for the primary ATA bus
 
-// Functions
-int disk_read(uint16_t lba, uint8_t *buffer);
-int disk_write(uint16_t lba, const uint8_t *buffer);
+#define ATA_CMD_READ  0x20        // Read command for PIO mode
+#define ATA_CMD_WRITE 0x30        // Write command for PIO mode
+#define ATA_SECTOR_SIZE 512       // Size of a sector in bytes
 
-#endif // DISK_H
+void ata_read_sector(uint32_t lba, uint8_t *buffer);
+void ata_write_sector(uint32_t lba, const uint8_t *buffer);
+
+#endif
