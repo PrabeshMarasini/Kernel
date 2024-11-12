@@ -88,15 +88,37 @@ build-x86_64: $(all_object_files)
 build-textfile: $(textfile_object_files)
 	mkdir -p build/textfile
 
+# Variables
+DISK_IMG = disk.img
+DISK_SIZE = 100M
+
 # Run target to execute kernel in QEMU
-.PHONY: run
-run: build-x86_64
+.PHONY: run create-disk
+run: build-x86_64 create-disk
+	@echo "Starting QEMU with kernel and disk image..."
 	qemu-system-x86_64 \
 		-d int \
 		-cdrom dist/x86_64/kernel.iso \
+		-hda $(DISK_IMG) \
 		-D qemu.log
 
-# Clean target to remove build artifacts
+# Create disk image only if it doesn't exist
+create-disk:
+	@if [ ! -f $(DISK_IMG) ]; then \
+		echo "Creating new disk image ($(DISK_SIZE))..."; \
+		qemu-img create -f raw $(DISK_IMG) $(DISK_SIZE); \
+		echo "✓ Disk image created: $(DISK_IMG)"; \
+	else \
+		echo "✓ Using existing disk image: $(DISK_IMG)"; \
+	fi
+
+# Clean target to remove disk image and start fresh
 .PHONY: clean
 clean:
-	rm -rf build dist
+	@if [ -f $(DISK_IMG) ]; then \
+		echo "Removing disk image..."; \
+		rm -f $(DISK_IMG); \
+		echo "✓ Disk image removed"; \
+	fi
+	# Add your existing clean commands here
+
