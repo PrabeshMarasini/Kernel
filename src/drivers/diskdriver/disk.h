@@ -12,5 +12,10 @@
 
 void ata_read_sector(uint32_t lba, uint8_t *buffer);
 void ata_write_sector(uint32_t lba, const uint8_t *buffer);
+void ata_wait_for_drive_ready(void);  // Function to wait for drive to be ready
+void ata_wait_for_drive_ready_with_timeout(void); // Function to wait for drive with timeout
+void ata_send_command(uint8_t command);  // Function to send ATA command
+void ata_select_drive(uint8_t drive);   // Function to select the drive
+void print_str(const char *str);  // Function to print string (for error handling)
 
 #endif

@@ -1,4 +1,5 @@
 #include <stdint.h>  // For uint8_t, uint16_t
+#include "disk.h"
 
 #define ATA_PRIMARY_IO        0x1F0   // Primary IO base
 #define ATA_PRIMARY_CONTROL   0x3F6   // Primary control port
@@ -57,6 +58,7 @@ void ata_send_command(uint8_t command) {
 }
 
 void ata_read_sector(uint32_t lba, uint8_t* buffer) {
+    int timeout = 10000;
     ata_wait_ready();
 
     // Select the drive (0 = master, 1 = slave)
@@ -70,7 +72,15 @@ void ata_read_sector(uint32_t lba, uint8_t* buffer) {
     outb(ATA_PRIMARY_IO + 6, 0xE0 | ((lba >> 24) & 0x0F));// Drive and LBA bits
 
     ata_send_command(ATA_CMD_READ);
-    ata_wait_for_drive_ready();
+
+    // Wait for the drive to be ready with timeout
+    ata_wait_for_drive_ready_with_timeout();
+
+    // If timeout occurred, return early
+    if (timeout <= 0) {
+        print_str("Disk read operation failed due to timeout.\n");
+        return;
+    }
 
     // Read data from the data port (sector size is 512 bytes)
     for (int i = 0; i < SECTOR_SIZE / 2; i++) {
@@ -78,7 +88,9 @@ void ata_read_sector(uint32_t lba, uint8_t* buffer) {
     }
 }
 
+
 void ata_write_sector(uint32_t lba, const uint8_t* buffer) {
+    int timeout = 10000;
     ata_wait_ready();
 
     // Select the drive (0 = master, 1 = slave)
@@ -92,7 +104,15 @@ void ata_write_sector(uint32_t lba, const uint8_t* buffer) {
     outb(ATA_PRIMARY_IO + 6, 0xE0 | ((lba >> 24) & 0x0F));// Drive and LBA bits
 
     ata_send_command(ATA_CMD_WRITE);
-    ata_wait_for_drive_ready();
+
+    // Wait for the drive to be ready with timeout
+    ata_wait_for_drive_ready_with_timeout();
+
+    // If timeout occurred, return early
+    if (timeout <= 0) {
+        print_str("Disk write operation failed due to timeout.\n");
+        return;
+    }
 
     // Write data to the data port (sector size is 512 bytes)
     for (int i = 0; i < SECTOR_SIZE / 2; i++) {
@@ -101,5 +121,25 @@ void ata_write_sector(uint32_t lba, const uint8_t* buffer) {
 
     // Flush the cache by sending the cache flush command
     ata_send_command(0xE7);
-    ata_wait_for_drive_ready();
+    ata_wait_for_drive_ready_with_timeout();
+    
+    // If timeout occurred, return early
+    if (timeout <= 0) {
+        print_str("Cache flush failed due to timeout.\n");
+        return;
+    }
+}
+
+
+// Wait until the drive is ready or a timeout occurs (with a timeout limit)
+void ata_wait_for_drive_ready_with_timeout() {
+    int timeout = 10000; // Set an arbitrary timeout value (in loops/iterations)
+    
+    while (!(inb(ATA_PRIMARY_IO + 7) & 0x08)) { // Check if the drive is ready (bit 3 = 1)
+        if (--timeout <= 0) {
+            // Timeout occurred
+            // print_str("Disk timeout error! Drive not ready.\n");
+            return;
+        }
+    }
 }

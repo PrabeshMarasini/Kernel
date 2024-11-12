@@ -2,6 +2,7 @@
 #include "../memory/memory.h"
 #include <string.h>
 #include <stdarg.h>
+#include "../drivers/diskdriver/disk.h"
 
 // Custom snprintf implementation
 int custom_snprintf(char* str, size_t size, const char* format, ...);
@@ -72,48 +73,114 @@ int file_exists(const char* name) {
 }
 
 // Function to create a file
-int create_file(const char* name) {
-    if (file_exists(name)) {
-        return -1; // File already exists
-    }
+typedef struct {
+    char filename[FILENAME_LENGTH];
+    uint32_t size;
+    uint32_t start_sector;
+} FileEntry;
+
+// In-memory file table buffer
+FileEntry file_table[MAX_FILES];
+
+// Read the file table into memory (assuming 1 file entry per sector for simplicity)
+void load_file_table() {
     for (int i = 0; i < MAX_FILES; i++) {
-        if (root_dir[i].name[0] == '\0') {
-            strncpy(root_dir[i].name, name, 31);
-            root_dir[i].name[31] = '\0'; // Ensure null termination
-            root_dir[i].inode = i;
-            inodes[i].size = 0;
-            return 0; // Success
+        ata_read_sector(FILE_TABLE_START + i, (uint8_t*)&file_table[i]);
+    }
+}
+
+// Save the file table to disk
+void save_file_table() {
+    for (int i = 0; i < MAX_FILES; i++) {
+        ata_write_sector(FILE_TABLE_START + i, (uint8_t*)&file_table[i]);
+    }
+}
+
+// Create a file by saving it to disk with the given name and content
+int create_file(const char* filename, const uint8_t* content, uint32_t size) {
+    load_file_table();
+
+    // Check if the file already exists
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (strncmp(file_table[i].filename, filename, FILENAME_LENGTH) == 0) {
+            return -1; // File already exists
         }
     }
-    return -2; // No space available
+
+    // Find an empty entry in the file table
+    int file_index = -1;
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (file_table[i].filename[0] == '\0') { // Empty entry if filename is empty
+            file_index = i;
+            break;
+        }
+    }
+
+    if (file_index == -1) {
+        return -2; // No space in file table
+    }
+
+    // Calculate required sectors
+    uint32_t required_sectors = (size + ATA_SECTOR_SIZE - 1) / ATA_SECTOR_SIZE;
+
+    // Find a free sector for the new file
+    uint32_t start_sector = DATA_START_SECTOR;
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (file_table[i].filename[0] != '\0') { // Skip used entries
+            start_sector = file_table[i].start_sector + (file_table[i].size + ATA_SECTOR_SIZE - 1) / ATA_SECTOR_SIZE;
+        }
+    }
+
+    // Set file entry metadata
+    strncpy(file_table[file_index].filename, filename, FILENAME_LENGTH);
+    file_table[file_index].size = size;
+    file_table[file_index].start_sector = start_sector;
+
+    // Save the file table back to disk
+    save_file_table();
+
+    // Write file content to disk
+    for (uint32_t i = 0; i < required_sectors; i++) {
+        ata_write_sector(start_sector + i, content + i * ATA_SECTOR_SIZE);
+    }
+
+    return 0; // Success
 }
 
 // Function to delete a file
-int delete_file(const char* name) {
+int delete_file(const char* filename) {
+    load_file_table();  // Load the file table from the disk
+
+    // Search for the file in the file table
+    int file_index = -1;
     for (int i = 0; i < MAX_FILES; i++) {
-        if (strncmp(root_dir[i].name, name, 32) == 0) {
-            root_dir[i].name[0] = '\0';
-            for (int j = 0; j < NUM_DIRECT_BLOCKS; j++) {
-                if (inodes[i].blocks[j] != 0) {
-                    free_block(inodes[i].blocks[j]);
-                }
-            }
-            if (inodes[i].indirect_block != 0) {
-                uint32_t* indirect_block = (uint32_t*)&data_blocks[inodes[i].indirect_block];
-                for (int j = 0; j < BLOCK_POINTERS_PER_BLOCK; j++) {
-                    if (indirect_block[j] != 0) {
-                        free_block(indirect_block[j]);
-                    }
-                }
-                free_block(inodes[i].indirect_block);
-            }
-            inodes[i].indirect_block = 0;
-            inodes[i].size = 0;
-            return 0; // Success
+        if (strncmp(file_table[i].filename, filename, FILENAME_LENGTH) == 0) {
+            file_index = i;
+            break;
         }
     }
-    return -1; // File not found
+
+    if (file_index == -1) {
+        return -1;  // File not found
+    }
+
+    // Free the sectors occupied by the file
+    uint32_t total_sectors = (file_table[file_index].size + ATA_SECTOR_SIZE - 1) / ATA_SECTOR_SIZE;
+    for (uint32_t i = 0; i < total_sectors; i++) {
+        free_block(file_table[file_index].start_sector + i);  // Free each sector occupied by the file
+    }
+
+    // Clear the file table entry
+    file_table[file_index].filename[0] = '\0';  // Mark the filename as empty
+    file_table[file_index].size = 0;
+    file_table[file_index].start_sector = 0;
+
+    // Save the updated file table back to the disk
+    save_file_table();  // Write the updated file table back to disk
+
+    return 0;  // Success
 }
+
 
 // Function to write to a file
 int write_file(const char* name, const uint8_t* data, uint32_t size) {
@@ -375,19 +442,26 @@ size_t fs_write(File* file, const char* buffer, size_t size) {
 }
 
 // Function to list all files
+// Function to list all files from disk
 char* list_files() {
     static char buffer[4096];
     int pos = 0;
     buffer[0] = '\0'; // Ensure buffer is initially empty
 
+    // Load the file table from disk
+    load_file_table();  // This function should read the file table from disk using ata_read_sector
+
+    // Iterate over the file table to list all files
     for (int i = 0; i < MAX_FILES; i++) {
-        if (root_dir[i].name[0] != '\0') { // Only include valid files
-            pos += custom_snprintf(buffer + pos, sizeof(buffer) - pos, "File: %s\n", root_dir[i].name);
+        if (file_table[i].filename[0] != '\0') { // Only include valid files
+            // Append file name to the buffer
+            pos += custom_snprintf(buffer + pos, sizeof(buffer) - pos, "File: %s\n", file_table[i].filename);
         }
     }
 
     return buffer;
 }
+
 
 // Custom snprintf implementation
 int custom_snprintf(char* str, size_t size, const char* format, ...) {

@@ -9,6 +9,10 @@
 #define MAX_FILES 128
 #define NUM_DIRECT_BLOCKS 10
 #define BLOCK_POINTERS_PER_BLOCK 1024
+#define FILE_TABLE_START   1                 // Sector number where file table starts
+#define DATA_START_SECTOR  100               // Sector where actual file data starts
+#define FILENAME_LENGTH    32                // Max filename length
+
 
 // Structure for inode
 typedef struct {
@@ -38,7 +42,7 @@ typedef struct {
 
 // Function prototypes
 void init_fs();
-int create_file(const char* name);
+int create_file(const char* filename, const uint8_t* content, uint32_t size);
 int delete_file(const char* name);
 int write_file(const char* name, const uint8_t* data, uint32_t size);
 int read_file(const char* name, uint8_t* buffer, uint32_t size);
