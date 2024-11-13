@@ -329,14 +329,29 @@ int read_file(const char* name, uint8_t* buffer, uint32_t size) {
 
 // Function to open a file
 File* fs_open(const char* filename) {
+    load_file_table();
+
     for (int i = 0; i < MAX_FILES; i++) {
-        if (strncmp(root_dir[i].name, filename, 32) == 0) {
+        if (strncmp(file_table[i].filename, filename, FILENAME_LENGTH) == 0) {
             static File file;
-            file.inode = root_dir[i].inode;
-            file.pos = 0;
+            file.inode = i; // Set inode as index in file table
+            file.pos = 0;   // Start reading from the beginning of the file
+
+            // Retrieve file's start sector and size from file table
+            uint32_t start_sector = file_table[i].start_sector;
+            uint32_t file_size = file_table[i].size;
+            uint32_t required_sectors = (file_size + ATA_SECTOR_SIZE - 1) / ATA_SECTOR_SIZE;
+
+            // Load the file data into a buffer for reading (e.g., from start sector)
+            static uint8_t file_buffer[MAX_FILES];
+            for (uint32_t j = 0; j < required_sectors; j++) {
+                ata_read_sector(start_sector + j, file_buffer + j * ATA_SECTOR_SIZE);
+            }
+
             return &file;
         }
     }
+
     return NULL; // File not found
 }
 

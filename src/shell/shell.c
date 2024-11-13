@@ -399,8 +399,11 @@ void dt_command()
 
 void create_file_command(const char *filename)
 {
+    const uint8_t *content = NULL; // For now, let's assume you're creating an empty file.
+    uint32_t size = 0; // Size is 0 because we're not adding any content.
+
     // Call create_file and get the result
-    int create_result = create_file(filename);
+    int create_result = create_file(filename, content, size);
 
     // Handle the result of file creation
     if (create_result == 0)
@@ -436,24 +439,21 @@ void create_file_command(const char *filename)
     cursor_x = strlen("Shell> ");
 }
 
-void open_file_command(const char *filename)
-{
-    // Check if the file exists
-    if (!file_exists(filename))
-    {
-        // File does not exist, print error message
+
+void open_file_command(const char *filename) {
+    File *file = fs_open(filename);
+
+    if (file == NULL) {
         print_line_with_color(0, cursor_y, "Error: File ", PRINT_COLOR_RED, PRINT_COLOR_BLACK);
         print_str(filename);
         print_str(" does not exist");
 
         cursor_y++;
-        if (cursor_y >= SCREEN_HEIGHT)
-        {
+        if (cursor_y >= SCREEN_HEIGHT) {
             scroll_screen();
         }
 
-        // Ensure the prompt is printed immediately after the error message
-        cursor_x = 0; // Move cursor to the beginning of the line
+        cursor_x = 0;
         print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
         print_set_cursor(cursor_x, cursor_y);
         print_str("Shell> ");
@@ -461,22 +461,22 @@ void open_file_command(const char *filename)
         return;
     }
 
-    // Display the file content
-    display_textfile(filename);
+    // Use filename to display the file content
+    display_textfile(filename); // Pass the filename (not the File *)
 
-    // Move cursor to next line and ensure the prompt is correctly placed
     cursor_y++;
-    if (cursor_y >= SCREEN_HEIGHT)
-    {
+    if (cursor_y >= SCREEN_HEIGHT) {
         scroll_screen();
     }
 
-    cursor_x = 0; // Move cursor to the beginning of the line
+    cursor_x = 0;
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
     print_set_cursor(cursor_x, cursor_y);
     print_str("Shell> ");
     cursor_x = strlen("Shell> ");
 }
+
+
 
 void delete_file_command(const char *file)
 {
