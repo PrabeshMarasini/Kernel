@@ -184,7 +184,7 @@ void display_save_message(const char *message) {
 
 // Function to save the current content to the file
 void save_current_file(const char *filename, const uint8_t *content, int length) {
-    int save_result = write_file(filename, content, length);
+    int save_result = save_file(filename, content, length);
     if (save_result < 0) {
         display_save_message("Error saving file.");
     } else {

@@ -236,55 +236,40 @@ int write_file(const char* name, const uint8_t* data, uint32_t size) {
 
 // Function to save a file's content
 int save_file(const char* name, const uint8_t* data, uint32_t size) {
-    // Check if the file exists
+    load_file_table();  // Load current file table state
+
+    // Find the file in the file table
+    int file_index = -1;
     for (int i = 0; i < MAX_FILES; i++) {
-        if (strncmp(root_dir[i].name, name, 32) == 0) {
-            inode_t* inode = &inodes[root_dir[i].inode];
-            uint32_t remaining_size = size;
-            uint32_t block_index = 0;
-            uint32_t data_index = 0;
-
-            // Save data to direct blocks
-            while (remaining_size > 0 && block_index < NUM_DIRECT_BLOCKS) {
-                if (inode->blocks[block_index] == 0) {
-                    inode->blocks[block_index] = allocate_block();
-                }
-                uint32_t write_size = FS_BLOCK_SIZE - (data_index % FS_BLOCK_SIZE);
-                if (write_size > remaining_size) {
-                    write_size = remaining_size;
-                }
-                memcpy(&data_blocks[inode->blocks[block_index]] + (data_index % FS_BLOCK_SIZE), data + data_index, write_size);
-                data_index += write_size;
-                remaining_size -= write_size;
-                block_index++;
-            }
-
-            // Save data to indirect blocks if needed
-            if (remaining_size > 0) {
-                if (inode->indirect_block == 0) {
-                    inode->indirect_block = allocate_block();
-                }
-                uint32_t* indirect_block = (uint32_t*)&data_blocks[inode->indirect_block];
-
-                for (int j = 0; j < BLOCK_POINTERS_PER_BLOCK && remaining_size > 0; j++) {
-                    if (indirect_block[j] == 0) {
-                        indirect_block[j] = allocate_block();
-                    }
-                    uint32_t write_size = FS_BLOCK_SIZE;
-                    if (write_size > remaining_size) {
-                        write_size = remaining_size;
-                    }
-                    memcpy(&data_blocks[indirect_block[j]], data + data_index, write_size);
-                    data_index += write_size;
-                    remaining_size -= write_size;
-                }
-            }
-
-            inode->size = size;
-            return 0; // Success
+        if (strncmp(file_table[i].filename, name, FILENAME_LENGTH) == 0) {
+            file_index = i;
+            break;
         }
     }
-    return -1; // File not found
+
+    if (file_index == -1) {
+        return -1;  // File not found
+    }
+
+    // Calculate required sectors
+    uint32_t required_sectors = (size + ATA_SECTOR_SIZE - 1) / ATA_SECTOR_SIZE;
+
+    // Write file content to disk
+    uint32_t start_sector = file_table[file_index].start_sector;
+    for (uint32_t i = 0; i < required_sectors; i++) {
+        uint32_t write_size = (i == required_sectors - 1 && size % ATA_SECTOR_SIZE) 
+            ? size % ATA_SECTOR_SIZE 
+            : ATA_SECTOR_SIZE;
+        ata_write_sector(start_sector + i, data + i * ATA_SECTOR_SIZE);
+    }
+
+    // Update file size in file table
+    file_table[file_index].size = size;
+
+    // Save the updated file table
+    save_file_table();
+
+    return 0;  // Success
 }
 
 // Function to read from a file
