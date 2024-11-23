@@ -7,4 +7,4 @@
 
 int snprintf(char* buffer, size_t size, const char* format, ...);
 
-#endif // SNPRINTF_H
+#endif

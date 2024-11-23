@@ -1,9 +1,8 @@
 #ifndef STRING_H
 #define STRING_H
 
-#include <stddef.h>  // For size_t
+#include <stddef.h> 
 
-// Basic string functions
 void *memcpy(void *dest, const void *src, size_t n);
 void *memmove(void *dest, const void *src, size_t n);
 void *memset(void *s, int c, size_t n);
@@ -25,4 +24,4 @@ char *strpbrk(const char *s, const char *accept);
 char *strstr(const char *haystack, const char *needle);
 char *strtok(char *str, const char *delim);
 
-#endif // STRING_H
+#endif 

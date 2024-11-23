@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "shell.h": "c",
-        "cstdint": "c"
+        "cstdint": "c",
+        "disk.h": "c"
     }
 }

@@ -120,5 +120,9 @@ clean:
 		rm -f $(DISK_IMG); \
 		echo "✓ Disk image removed"; \
 	fi
-	# Add your existing clean commands here
+	# Remove all .o files in the build directory
+	@echo "Removing all object files..."
+	@find build -type f -name '*.o' -exec rm -f {} +
+	@echo "✓ Object files removed"
+
 

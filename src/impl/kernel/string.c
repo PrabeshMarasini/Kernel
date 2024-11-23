@@ -61,7 +61,6 @@ int memcmp(const void *s1, const void *s2, size_t n) {
 char *strcpy(char *dest, const char *src) {
     char *d = dest;
     while ((*d++ = *src++)) {
-        // copy characters
     }
     return dest;
 }
@@ -69,7 +68,6 @@ char *strcpy(char *dest, const char *src) {
 char *strncpy(char *dest, const char *src, size_t n) {
     char *d = dest;
     while (n-- && (*d++ = *src++)) {
-        // copy characters
     }
     while (n--) {
         *d++ = '\0';
@@ -83,7 +81,6 @@ char *strcat(char *dest, const char *src) {
         d++;
     }
     while ((*d++ = *src++)) {
-        // concatenate characters
     }
     return dest;
 }
@@ -94,7 +91,6 @@ char *strncat(char *dest, const char *src, size_t n) {
         d++;
     }
     while (n-- && (*d++ = *src++)) {
-        // concatenate characters
     }
     *d = '\0';
     return dest;

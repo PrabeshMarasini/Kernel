@@ -1,4 +1,3 @@
-// unistd.h
 #ifndef UNISTD_H
 #define UNISTD_H
 
@@ -8,4 +7,4 @@ void sleep(unsigned int seconds);
 void usleep(unsigned int microseconds);
 void yield(void);
 
-#endif // UNISTD_H
+#endif 

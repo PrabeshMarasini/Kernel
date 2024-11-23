@@ -34,20 +34,15 @@ static inline unsigned char inb(unsigned short port) {
     return ret;
 }
 
-void init_keyboard() {
-    // Initialize keyboard hardware (if necessary)
-}
-
 char keyboard_get_char() {
-    static int shift = 0;   // Shift state: 0 = not pressed, 1 = pressed
-    static int ctrl = 0;    // Ctrl state: 0 = not pressed, 1 = pressed
+    static int shift = 0;   
+    static int ctrl = 0;    
     char c = 0;
 
     if (inb(KEYBOARD_STATUS_PORT) & 1) {
         unsigned char scancode = inb(KEYBOARD_DATA_PORT);
 
         if (scancode & 0x80) {
-            // Key release
             scancode -= 0x80;
             if (scancode == LSHIFT || scancode == RSHIFT) {
                 shift = 0;
@@ -55,32 +50,24 @@ char keyboard_get_char() {
                 ctrl = 0;
             }
         } else {
-            // Key press
             if (scancode == LSHIFT || scancode == RSHIFT) {
                 shift = 1;
             } else if (scancode == LCTRL || scancode == RCTRL) {
                 ctrl = 1;
             } else if (scancode == UP_ARROW || scancode == DOWN_ARROW || scancode == LEFT_ARROW || scancode == RIGHT_ARROW) {
-                // Arrow keys detected; handle them as needed later
-                c = scancode;  // Return the scan code itself for now
+                c = scancode;
             } else {
                 if (shift) {
                     c = shift_keymap[scancode];
                 } else {
                     c = keymap[scancode];
                 }
-
-                // Check for Ctrl + S
                 if (ctrl && !shift && (c == 's' || c == 'S')) {
-                    return 0x13; // ASCII code for Ctrl + S
+                    return 0x13;
                 }
-                
-                // Check for Ctrl + Shift + S
                 if (ctrl && shift && (c == 's' || c == 'S')) {
-                    return 0x1B; // Special code for Ctrl + Shift + S
+                    return 0x1B; 
                 }
-
-                // If Ctrl is pressed, don't return any character
                 if (ctrl) {
                     return 0;
                 }
@@ -94,16 +81,16 @@ char keyboard_get_char() {
 void handle_keypress() {
     char c = keyboard_get_char();
     if (c == 0x1B) {
-        // Handle Ctrl + Shift + S (switch to shell)
-        switch_to_shell();  // Ensure this function is declared and defined globally
+        switch_to_shell();
     } else if (c == 0x13) {
-        // Handle Ctrl + S (save file)
-        save_current_file(); // Ensure this function is declared and defined globally
+        save_current_file();
     } else if (c == UP_ARROW || c == DOWN_ARROW || c == LEFT_ARROW || c == RIGHT_ARROW) {
-        // Handle arrow keys as needed later
-        // For now, just print the scan code
-        print_char('^');  // For example, print a caret symbol as a placeholder
+        print_char('^');
     } else if (c != 0) {
-        print_char(c);  // Print the character
+        print_char(c);
     }
+}
+
+void init_keyboard(){
+    
 }

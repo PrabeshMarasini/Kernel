@@ -35,15 +35,13 @@ struct tm get_rtc_time() {
 }
 
 void adjust_time_for_nepal(struct tm* time) {
-    int nepal_minutes_offset = 345; // Nepal is UTC+5:45
+    int nepal_minutes_offset = 345;
     int total_minutes = time->tm_hour * 60 + time->tm_min + nepal_minutes_offset;
     time->tm_hour = (total_minutes / 60) % 24;
     time->tm_min = total_minutes % 60;
-    // Adjust day, month, and year if needed (simplified, not handling all edge cases)
     if (time->tm_hour >= 24) {
         time->tm_hour -= 24;
         time->tm_mday++;
-        // You would need additional logic to handle month and year rollover
     }
 }
 

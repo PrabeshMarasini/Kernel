@@ -16,21 +16,16 @@ static char command_history[HISTORY_SIZE][MAX_INPUT] = {0};
 static int history_count = 0;
 static int history_index = -1;
 
-// Define the VGA character structure
 struct vga_char
 {
     char character;
     char color;
 };
 
-// VGA buffer pointer
 volatile struct vga_char *terminal_buffer = (volatile struct vga_char *)0xB8000;
-
-// Global variables
 static int cursor_x = 7;
 static int cursor_y = 1;
 
-// Functions
 void kernel_main();
 void handle_special_keys(char key);
 void run_shell();
@@ -39,13 +34,16 @@ void print_line_with_color(int x, int y, const char *line, int fg, int bg);
 void display_loading_animation(const char *filename);
 void scroll_screen();
 void list_files_command();
-void open_file_command(const char *filename);
+int open_file_command(const char *filename);
 void delete_file_command(const char *filename);
 void set_first_line_color();
 void start_shell();
 void create_file_command(const char *filename);
 void dt_command(void);
 void handle_command_history(char key, char *buffer, int *buffer_index);
+void print_int(int num);
+void itoa(int num, char *str, int base);
+
 
 void handle_special_keys(char key)
 {
@@ -74,7 +72,7 @@ void handle_special_keys(char key)
             cursor_x = SCREEN_WIDTH - 1;
         }
         print_set_cursor(cursor_x, cursor_y);
-        print_char(' '); // Clear the character on screen
+        print_char(' ');
         print_set_cursor(cursor_x, cursor_y);
     }
     else if (key >= 32 && key <= 126 && input_length < MAX_INPUT - 1)
@@ -94,13 +92,12 @@ void handle_special_keys(char key)
     }
 }
 
-// Date and Time Function
 void display_time()
 {
     struct tm time = get_rtc_time();
     adjust_time_for_nepal(&time);
     print_set_color(PRINT_COLOR_CYAN, PRINT_COLOR_BLACK);
-    print_set_cursor(0, 1); // Display on the second line
+    print_set_cursor(0, 1);
     print_time(&time);
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
     print_set_cursor(0, cursor_y);
@@ -108,13 +105,13 @@ void display_time()
 
 void clear_screen_but_keep_first_line()
 {
-    for (int y = 1; y < SCREEN_HEIGHT; y++) // Start from the second line (y = 1)
+    for (int y = 1; y < SCREEN_HEIGHT; y++)
     {
         clear_line(y);
     }
 
     cursor_x = 0;
-    cursor_y = 1; // Set cursor to the start of the second line
+    cursor_y = 1;
     print_set_cursor(cursor_x, cursor_y);
 }
 
@@ -124,15 +121,12 @@ void run_shell()
 
     while (1)
     {
-        // Clear the screen and set prompt
         print_clear();
         set_first_line_color();
         print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
         print_set_cursor(0, 1);
         print_str(prompt);
         print_enable_cursor(14, 15);
-
-        // Initialize cursor position
         cursor_y = 1;
         cursor_x = strlen(prompt);
 
@@ -147,7 +141,6 @@ void run_shell()
             {
                 if (c == '\b')
                 {
-                    // Handle backspace
                     if (buffer_index > 0)
                     {
                         buffer_index--;
@@ -155,14 +148,13 @@ void run_shell()
                         {
                             cursor_x--;
                             print_set_cursor(cursor_x, cursor_y);
-                            print_char(' '); // Clear the character on screen
+                            print_char(' ');
                             print_set_cursor(cursor_x, cursor_y);
                         }
                     }
                 }
                 else if (c == '\n')
                 {
-                    // Process command
                     buffer[buffer_index] = '\0';
                     cursor_y++;
                     if (cursor_y >= SCREEN_HEIGHT)
@@ -170,7 +162,6 @@ void run_shell()
                         scroll_screen();
                     }
 
-                    // Add command to history
                     if (buffer_index > 0)
                     {
                         strncpy(command_history[history_count % HISTORY_SIZE], buffer, MAX_INPUT);
@@ -178,7 +169,6 @@ void run_shell()
                         history_index = history_count;
                     }
 
-                    // Handle commands
                     if (strncmp(buffer, "dt", 2) == 0)
                     {
                         dt_command();
@@ -221,7 +211,6 @@ void run_shell()
                         }
                     }
 
-                    // Reset buffer and cursor for next command
                     buffer_index = 0;
                     cursor_x = 0;
                     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
@@ -231,12 +220,10 @@ void run_shell()
                 }
                 else if (c == UP_ARROW || c == DOWN_ARROW)
                 {
-                    // Handle command history navigation
                     handle_command_history(c, buffer, &buffer_index);
                 }
                 else
                 {
-                    // Handle character input
                     if (buffer_index < MAX_INPUT - 1 && cursor_x < SCREEN_WIDTH - 1)
                     {
                         buffer[buffer_index++] = c;
@@ -249,9 +236,6 @@ void run_shell()
     }
 }
 
-
-
-// Handle command history navigation
 void handle_command_history(char key, char *buffer, int *buffer_index)
 {
     if (key == UP_ARROW)
@@ -269,7 +253,6 @@ void handle_command_history(char key, char *buffer, int *buffer_index)
         }
     }
 
-    // Clear the current input line
     while (cursor_x > strlen("Shell> "))
     {
         cursor_x--;
@@ -277,11 +260,9 @@ void handle_command_history(char key, char *buffer, int *buffer_index)
         print_char(' ');
     }
 
-    // Reset cursor to start of input
     cursor_x = strlen("Shell> ");
     print_set_cursor(cursor_x, cursor_y);
 
-    // Copy the selected history command to the buffer
     if (history_index >= 0 && history_index < history_count)
     {
         strncpy(buffer, command_history[history_index % HISTORY_SIZE], MAX_INPUT);
@@ -295,18 +276,13 @@ void handle_command_history(char key, char *buffer, int *buffer_index)
         buffer[0] = '\0';
     }
 
-    // Ensure cursor is at the end of the command
     print_set_cursor(cursor_x, cursor_y);
 }
-
-
-
-
 
 void clear_line(int y)
 {
     if (y > 0)
-    { // Don't clear the first line
+    {
         print_set_cursor(0, y);
         for (int i = 0; i < SCREEN_WIDTH; i++)
         {
@@ -318,28 +294,21 @@ void clear_line(int y)
 void print_line_with_color(int x, int y, const char *line, int fg, int bg)
 {
     if (y > 0)
-    { // Don't print on the first line
+    {
         print_set_color(fg, bg);
         print_set_cursor(x, y);
         print_str(line);
     }
 }
 
-void display_loading_animation(const char *filename)
-{
-    // Implementation needed
-}
-
 void scroll_screen()
 {
-    // Save the first line
     struct vga_char first_line[SCREEN_WIDTH];
     for (int x = 0; x < SCREEN_WIDTH; x++)
     {
         first_line[x] = terminal_buffer[x];
     }
 
-    // Move the screen buffer up by one row, starting from the second row
     for (int y = 2; y < SCREEN_HEIGHT; y++)
     {
         for (int x = 0; x < SCREEN_WIDTH; x++)
@@ -348,7 +317,6 @@ void scroll_screen()
         }
     }
 
-    // Clear the last row of the screen
     for (int x = 0; x < SCREEN_WIDTH; x++)
     {
         terminal_buffer[(SCREEN_HEIGHT - 1) * SCREEN_WIDTH + x] = (struct vga_char){
@@ -356,41 +324,31 @@ void scroll_screen()
             .color = (PRINT_COLOR_WHITE | (PRINT_COLOR_BLACK << 4))};
     }
 
-    // Restore the first line
     for (int x = 0; x < SCREEN_WIDTH; x++)
     {
         terminal_buffer[x] = first_line[x];
     }
 
-    // Adjust cursor_y after scrolling
     cursor_y = SCREEN_HEIGHT - 1;
 }
 
 void dt_command()
 {
-    // Fetch the current date and time
     struct tm time = get_rtc_time();
     adjust_time_for_nepal(&time);
-
-    // Format the date and time
     char time_str[32];
     simple_snprintf(time_str, time.tm_year + 1900, time.tm_mon + 1, time.tm_mday,
                     time.tm_hour, time.tm_min, time.tm_sec);
-
-    // Print the date and time
     print_set_color(PRINT_COLOR_LIGHT_CYAN, PRINT_COLOR_BLACK);
     print_set_cursor(0, cursor_y);
     print_str(time_str);
-
-    // Move cursor to the next line
     cursor_y++;
     if (cursor_y >= SCREEN_HEIGHT)
     {
         scroll_screen();
     }
 
-    // Ensure the prompt is printed immediately after the date/time
-    cursor_x = 0; // Move cursor to the beginning of the line
+    cursor_x = 0;
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
     print_set_cursor(cursor_x, cursor_y);
     print_str("Shell> ");
@@ -399,13 +357,10 @@ void dt_command()
 
 void create_file_command(const char *filename)
 {
-    const uint8_t *content = NULL; // For now, let's assume you're creating an empty file.
-    uint32_t size = 0; // Size is 0 because we're not adding any content.
-
-    // Call create_file and get the result
+    const uint8_t *content = NULL;
+    uint32_t size = 0;
     int create_result = create_file(filename, content, size);
 
-    // Handle the result of file creation
     if (create_result == 0)
     {
         print_line_with_color(0, cursor_y, "File created: ", PRINT_COLOR_GREEN, PRINT_COLOR_BLACK);
@@ -424,14 +379,12 @@ void create_file_command(const char *filename)
         print_str(" could not be created");
     }
 
-    // Move cursor to the next line
     cursor_y++;
     if (cursor_y >= SCREEN_HEIGHT)
     {
         scroll_screen();
     }
 
-    // Print the prompt again
     cursor_x = 0;
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
     print_set_cursor(cursor_x, cursor_y);
@@ -439,11 +392,94 @@ void create_file_command(const char *filename)
     cursor_x = strlen("Shell> ");
 }
 
+// int open_file_command(const char *filename) {
+//     int file_index = fs_open(filename);  // This should return an index to file_table
+//     if (file_index == -1) {
+//         print_line_with_color(0, cursor_y, "Error: File ", PRINT_COLOR_RED, PRINT_COLOR_BLACK);
+//         print_str(filename);
+//         print_str(" does not exist");
 
-void open_file_command(const char *filename) {
-    File *file = fs_open(filename);
+//         cursor_y++;
+//         if (cursor_y >= SCREEN_HEIGHT) {
+//             scroll_screen();
+//         }
 
-    if (file == NULL) {
+//         cursor_x = 0;
+//         print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
+//         print_set_cursor(cursor_x, cursor_y);
+//         print_str("Shell> ");
+//         cursor_x = strlen("Shell> ");
+//         return -1;
+//     }
+
+//     file_entry_t *file = &file_table[file_index];
+//     if (file->size == 0) {
+//         print_line_with_color(0, cursor_y, "The file is empty!", PRINT_COLOR_YELLOW, PRINT_COLOR_BLACK);
+
+//         cursor_y++;
+//         if (cursor_y >= SCREEN_HEIGHT) {
+//             scroll_screen();
+//         }
+
+//         cursor_x = 0;
+//         print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
+//         print_set_cursor(cursor_x, cursor_y);
+//         print_str("Shell> ");
+//         cursor_x = strlen("Shell> ");
+//         return -1;
+//     }
+
+//     print_line_with_color(0, cursor_y, "File size: ", PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
+//     print_int(file->size);
+//     cursor_y++;
+//     if (cursor_y >= SCREEN_HEIGHT) {
+//         scroll_screen();
+//     }
+
+//     char read_buffer[128];
+//     size_t total_read = 0;
+
+//     print_line_with_color(0, cursor_y, "Content: ", PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
+//     cursor_y++;
+//     if (cursor_y >= SCREEN_HEIGHT) {
+//         scroll_screen();
+//     }
+
+//     while (total_read < file->size) {
+//         size_t bytes_to_read = sizeof(read_buffer);
+//         if (file->size - total_read < bytes_to_read) {
+//             bytes_to_read = file->size - total_read;
+//         }
+
+//         size_t bytes_read = fs_read(file_index, read_buffer, bytes_to_read);  // fs_read should take the index
+//         if (bytes_read == 0) {
+//             break;
+//         }
+
+//         read_buffer[bytes_read] = '\0';
+//         print_str(read_buffer);        
+//         total_read += bytes_read;
+//     }
+
+//     cursor_y++;
+//     if (cursor_y >= SCREEN_HEIGHT) {
+//         scroll_screen();
+//     }
+
+//     cursor_x = 0;
+//     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
+//     print_set_cursor(cursor_x, cursor_y);
+//     print_str("Shell> ");
+//     cursor_x = strlen("Shell> ");
+//     return 0;
+// }
+
+
+
+int open_file_command(const char *filename) {
+    int file_index = fs_open(filename);  // Now returns an index to file_table
+
+    if (file_index == -1) {
         print_line_with_color(0, cursor_y, "Error: File ", PRINT_COLOR_RED, PRINT_COLOR_BLACK);
         print_str(filename);
         print_str(" does not exist");
@@ -458,11 +494,14 @@ void open_file_command(const char *filename) {
         print_set_cursor(cursor_x, cursor_y);
         print_str("Shell> ");
         cursor_x = strlen("Shell> ");
-        return;
+        return -1;  // Return an integer error code
     }
 
-    // Use filename to display the file content
-    display_textfile(filename); // Pass the filename (not the File *)
+    // Access the file using file_table index
+    FileEntry *file = &file_table[file_index];
+
+    // Call display_textfile with the filename or the content as required
+    display_textfile(filename);
 
     cursor_y++;
     if (cursor_y >= SCREEN_HEIGHT) {
@@ -474,9 +513,53 @@ void open_file_command(const char *filename) {
     print_set_cursor(cursor_x, cursor_y);
     print_str("Shell> ");
     cursor_x = strlen("Shell> ");
+    return 0;  // Return an integer success code
 }
 
 
+
+void print_int(int num) {
+    char buffer[16];
+    itoa(num, buffer, 10);
+    print_str(buffer);
+}
+
+void itoa(int num, char *str, int base) {
+    int i = 0;
+    int isNegative = 0;
+
+    if (num == 0) {
+        str[i++] = '0';
+        str[i] = '\0';
+        return;
+    }
+
+    if (num < 0 && base == 10) {
+        isNegative = 1;
+        num = -num;
+    }
+
+    while (num != 0) {
+        int rem = num % base;
+        str[i++] = (rem > 9) ? (rem - 10) + 'a' : rem + '0';
+        num = num / base;
+    }
+
+    if (isNegative) {
+        str[i++] = '-';
+    }
+
+    str[i] = '\0';
+    int start = 0;
+    int end = i - 1;
+    while (start < end) {
+        char temp = str[start];
+        str[start] = str[end];
+        str[end] = temp;
+        start++;
+        end--;
+    }
+}
 
 void delete_file_command(const char *file)
 {
@@ -507,8 +590,7 @@ void delete_file_command(const char *file)
         scroll_screen();
     }
 
-    // Ensure the prompt is printed immediately after the command result
-    cursor_x = 0; // Move cursor to the beginning of the line
+    cursor_x = 0;
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
     print_set_cursor(cursor_x, cursor_y);
     print_str("Shell> ");
@@ -517,7 +599,7 @@ void delete_file_command(const char *file)
 
 void list_files_command()
 {
-    char *files = list_files(); // Assuming list_files() returns a string with filenames or NULL
+    char *files = list_files();
     if (files != NULL && strlen(files) > 0)
     {
         char *file = strtok(files, "\n");
@@ -551,8 +633,7 @@ void list_files_command()
         }
     }
 
-    // Ensure the prompt is printed immediately after listing files
-    cursor_x = 0; // Move cursor to the beginning of the line
+    cursor_x = 0;
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
     print_set_cursor(cursor_x, cursor_y);
     print_str("Shell> ");
@@ -579,7 +660,6 @@ void start_shell()
 
 void switch_to_shell()
 {
-    // Clear the screen or reset display state
     print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE);
     for (int i = 0; i < SCREEN_HEIGHT; ++i)
     {
@@ -590,10 +670,7 @@ void switch_to_shell()
         }
     }
 
-    // Reset cursor position or display shell prompt
     print_set_cursor(0, 0);
     print_str("Shell>");
-
-    // Call the shell initialization or main function if necessary
-    run_shell(); // Start the shell
+    run_shell();
 }

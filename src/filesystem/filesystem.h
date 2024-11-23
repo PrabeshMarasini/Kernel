@@ -4,54 +4,34 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// Define the size of a file block
-#define FS_BLOCK_SIZE 4096
-#define MAX_FILES 128
-#define NUM_DIRECT_BLOCKS 10
-#define BLOCK_POINTERS_PER_BLOCK 1024
-#define FILE_TABLE_START   1                 // Sector number where file table starts
-#define DATA_START_SECTOR  100               // Sector where actual file data starts
-#define FILENAME_LENGTH    32                // Max filename length
+#define MAX_FILES 512              
+#define FILENAME_LENGTH 64        
+#define MAX_FILE_CONTENT 4096      
 
-
-// Structure for inode
 typedef struct {
-    uint32_t size;
-    uint32_t blocks[NUM_DIRECT_BLOCKS];
-    uint32_t indirect_block;
-} inode_t;
+    char filename[FILENAME_LENGTH];    
+    int is_occupied;
+    uint32_t size;                
+    uint32_t start_sector;    
+    char content[MAX_FILE_CONTENT];        
+} FileEntry;
 
-// Structure for a directory entry
-typedef struct {
-    char name[32];
-    uint32_t inode;
-} dir_entry_t;
+extern FileEntry file_table[MAX_FILES];
 
-// Structure for the superblock
-typedef struct {
-    uint32_t total_blocks;
-    uint32_t free_blocks;
-    uint32_t block_size;
-} superblock_t;
 
-// Structure for an open file
 typedef struct {
-    uint32_t inode;
-    uint32_t pos;
+    int index;                     
+    uint32_t pos;                  
 } File;
 
-// Function prototypes
-void init_fs();
-int create_file(const char* filename, const uint8_t* content, uint32_t size);
-int delete_file(const char* name);
-int write_file(const char* name, const uint8_t* data, uint32_t size);
-int read_file(const char* name, uint8_t* buffer, uint32_t size);
-int file_exists(const char* name);
-File* fs_open(const char* name);
-size_t fs_read(File* file, char* buffer, size_t size);
-size_t fs_write(File* file, const char* buffer, size_t size);
-void fs_close(File* file);
-char* list_files();
-int save_file(const char* name, const uint8_t* data, uint32_t size);
+void init_fs();                                          
+int create_file(const char* filename, const uint8_t* content, uint32_t size); 
+int delete_file(const char* name);                        
+int fs_open(const char* name);                            
+int fs_read(int file_index, uint8_t* buffer, uint32_t size); 
+char* list_files();                                       
+void save_file_table();                                   
+void load_file_table();                                   
+int save_file(const char* filename, const char* content, uint32_t size);
 
-#endif // FILESYSTEM_H
+#endif 

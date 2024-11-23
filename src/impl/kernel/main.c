@@ -38,29 +38,24 @@ void display_welcome_animation() {
     const char* welcome = "WELCOME";
     int welcome_len = strlen(welcome);
     int start_x = (80 - welcome_len) / 2;
-    int start_y = 12;  // Center vertically
+    int start_y = 12; 
 
     print_set_cursor(start_x, start_y);
     print_str(welcome);
 
-    // Simplified animation
     for (int i = 0; i < 5; i++) {
         print_set_cursor(start_x + welcome_len, start_y);
         print_str("...");
         
-        // Delay for about 1 second (adjust as needed for your system)
         for (volatile int k = 0; k < 20000000; k++) {}
         
         print_set_cursor(start_x + welcome_len, start_y);
         print_str("   ");
-        
-        // Delay for about 1 second
+       
         for (volatile int k = 0; k < 10000000; k++) {}
     }
-    // Delay for 2 seconds before clearing
     for (volatile int k = 0; k < 100000000; k++) {}
 
-    // Clear the screen after animation
     print_clear();
 }
 
@@ -84,7 +79,6 @@ void kernel_main() {
     static int first_run = 1;
 
     if (first_run) {
-        // Display welcome animation only on first run
         display_welcome_animation();
         first_run = 0;
     }
@@ -108,7 +102,7 @@ void kernel_main() {
         if (update_counter == 0) {
             update_datetime();
         }
-        update_counter = (update_counter + 1) % 1000; // Update datetime less frequently
+        update_counter = (update_counter + 1) % 1000;
 
         print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLUE);
         print_set_cursor(cursor_x, cursor_y);

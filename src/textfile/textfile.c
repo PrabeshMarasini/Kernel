@@ -101,37 +101,6 @@ void update_char_count(int count) {
     }
 }
 
-// Function to update the text content section
-void update_text_content(const uint8_t *buffer, int length) {
-    int cursor_x = 0;
-    int cursor_y = 2; // Start after header
-
-    print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK); // Set text content background color
-    print_set_cursor(0, cursor_y);
-    for (int i = 0; i < length; ++i) {
-        if (buffer[i] == '\n') {
-            cursor_y++;
-            cursor_x = 0;
-            if (cursor_y >= SCREEN_HEIGHT) {
-                textfile_scroll_screen();
-                cursor_y = SCREEN_HEIGHT - 1;
-            }
-        } else {
-            print_set_cursor(cursor_x, cursor_y);
-            print_char(buffer[i]);
-            cursor_x++;
-            if (cursor_x >= SCREEN_WIDTH) {
-                cursor_x = 0;
-                cursor_y++;
-                if (cursor_y >= SCREEN_HEIGHT) {
-                    textfile_scroll_screen();
-                    cursor_y = SCREEN_HEIGHT - 1;
-                }
-            }
-        }
-    }
-}
-
 // Function to clear the screen and reset it
 void clear_and_reset_screen(void) {
     clear_screen(); // Clear the screen
@@ -192,8 +161,42 @@ void save_current_file(const char *filename, const uint8_t *content, int length)
     }
 }
 
+void update_text_content(const uint8_t *buffer, int length, int *final_x, int *final_y) {
+    int cursor_x = 0;
+    int cursor_y = 2; // Start after header
+
+    print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE);
+    print_set_cursor(0, cursor_y);
+    for (int i = 0; i < length; ++i) {
+        if (buffer[i] == '\n') {
+            cursor_y++;
+            cursor_x = 0;
+            if (cursor_y >= SCREEN_HEIGHT) {
+                textfile_scroll_screen();
+                cursor_y = SCREEN_HEIGHT - 1;
+            }
+        } else {
+            print_set_cursor(cursor_x, cursor_y);
+            print_char(buffer[i]);
+            cursor_x++;
+            if (cursor_x >= SCREEN_WIDTH) {
+                cursor_x = 0;
+                cursor_y++;
+                if (cursor_y >= SCREEN_HEIGHT) {
+                    textfile_scroll_screen();
+                    cursor_y = SCREEN_HEIGHT - 1;
+                }
+            }
+        }
+    }
+    
+    // Store final cursor position
+    *final_x = cursor_x;
+    *final_y = cursor_y;
+}
+
 void display_textfile(const char *filename) {
-    char input[MAX_INPUT] = {0};
+    char input[MAX_INPUT] = {0};     // Buffer for input
     int input_length = 0;
     int cursor_x = 0;
     int cursor_y = 2;
@@ -204,21 +207,30 @@ void display_textfile(const char *filename) {
     clear_screen();
     update_filename(filename);
 
-    // Read file and update content section
-    int read_result = read_file(filename, file_buffer, BUFFER_SIZE);
+    // Open the file to read
+    int file_index = fs_open(filename);
+    if (file_index == -1) {
+        // Handle the case where the file can't be opened
+        print_set_color(PRINT_COLOR_RED, PRINT_COLOR_WHITE);
+        print_set_cursor(0, 0);
+        print_str("Error: Unable to open file.");
+        while (1); // Halt or handle accordingly
+    }
 
+    // Read file and update content section
+    int read_result = fs_read(file_index, file_buffer, BUFFER_SIZE);  // Use file_index here
     if (read_result > 0) {
-        update_text_content(file_buffer, read_result);
+        update_text_content(file_buffer, read_result, &cursor_x, &cursor_y);  // Get final cursor position
         // Copy the content into the input buffer
         for (int i = 0; i < read_result; i++) {
-            if (input_length < MAX_INPUT) { // Prevent buffer overflow
+            if (input_length < MAX_INPUT - 1) { // Prevent buffer overflow
                 input[input_length++] = file_buffer[i];
             } else {
                 // Handle buffer overflow
                 print_set_color(PRINT_COLOR_RED, PRINT_COLOR_WHITE);
                 print_set_cursor(0, SCREEN_HEIGHT - 1);
                 print_str("Error: Input buffer overflow");
-                while (1); // Halt
+                while (1); // Halt or handle accordingly
             }
         }
     }

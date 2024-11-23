@@ -1,4 +1,3 @@
-// sprintf.c
 #include "sprintf.h"
 #include <stdarg.h>
 #include "snprintf.h"
@@ -32,14 +31,12 @@ int sprintf(char* buffer, const char* format, ...) {
                 char temp[20];
                 int len = 0;
 
-                // Convert integer to string
                 int temp_value = value;
                 do {
                     temp[len++] = '0' + (temp_value % 10);
                     temp_value /= 10;
                 } while (temp_value > 0);
                 
-                // Reverse the string
                 for (int i = 0; i < len / 2; i++) {
                     char t = temp[i];
                     temp[i] = temp[len - 1 - i];
@@ -48,7 +45,6 @@ int sprintf(char* buffer, const char* format, ...) {
                 
                 append(buffer, &offset, temp, len);
             }
-            // Add handling for other formats as needed
         } else {
             append(buffer, &offset, p, 1);
             p++;

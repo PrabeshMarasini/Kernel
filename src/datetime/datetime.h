@@ -17,4 +17,4 @@ struct tm get_rtc_time();
 void print_time(const struct tm* time);
 void simple_snprintf(char* buffer, int year, int month, int day, int hour, int minute, int second);
 
-#endif // DATETIME_H
+#endif

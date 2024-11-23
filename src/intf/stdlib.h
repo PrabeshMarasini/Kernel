@@ -1,36 +1,28 @@
 #ifndef STDLIB_H
 #define STDLIB_H
 
-#include <stddef.h>  // For size_t
-#include "string.h"  // For memset
+#include <stddef.h>
+#include "string.h"
 #include "../memory/memory.h"
 
-// Function prototypes
 void *malloc(size_t size);
 void free(void *ptr);
 void *realloc(void *ptr, size_t size);
 void *calloc(size_t nmemb, size_t size);
 
-
-// Static heap and free list initialization
 static char heap[HEAP_SIZE];
 static Block *free_list = (Block *)heap;
 static size_t heap_index = 0;
 
-// Memory management functions
-
 void *malloc(size_t size) {
     if (size == 0) return NULL;
 
-    size = (size + sizeof(Block) - 1) & ~(sizeof(Block) - 1); // Align size
-
-    // First-fit search for a free block
+    size = (size + sizeof(Block) - 1) & ~(sizeof(Block) - 1); 
     Block *prev = NULL;
     Block *curr = free_list;
     while (curr) {
         if (curr->size >= size) {
             if (curr->size > size + sizeof(Block)) {
-                // Split the block
                 Block *next = (Block *)((char *)curr + size + sizeof(Block));
                 next->size = curr->size - size - sizeof(Block);
                 next->next = curr->next;
@@ -48,7 +40,6 @@ void *malloc(size_t size) {
         curr = curr->next;
     }
 
-    // No suitable block found, extend heap if possible
     if ((heap_index + size + sizeof(Block)) <= HEAP_SIZE) {
         Block *new_block = (Block *)(heap + heap_index);
         new_block->size = size;
@@ -56,7 +47,7 @@ void *malloc(size_t size) {
         return (char *)new_block + sizeof(Block);
     }
 
-    return NULL;  // Out of memory
+    return NULL; 
 }
 
 void free(void *ptr) {
@@ -81,7 +72,7 @@ void *realloc(void *ptr, size_t size) {
 
     void *new_ptr = malloc(size);
     if (new_ptr == NULL) {
-        return NULL;  // Allocation failed
+        return NULL;  
     }
 
     size_t copy_size = (size < old_size) ? size : old_size;
@@ -100,4 +91,4 @@ void *calloc(size_t nmemb, size_t size) {
     return ptr;
 }
 
-#endif // STDLIB_H
+#endif 

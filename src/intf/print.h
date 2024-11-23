@@ -38,4 +38,4 @@ char print_get_char(int x, int y);
 void print_get_cursor(int *x, int *y);
 
 
-#endif // PRINT_H
+#endif
