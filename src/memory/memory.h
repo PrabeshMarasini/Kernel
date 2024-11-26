@@ -8,12 +8,12 @@
 #define BLOCK_SIZE 0x1000 // 4 KB
 
 typedef struct Block {
-    uint32_t size; // Number of blocks
-    struct Block* next; // Pointer to the next block in the free list
+    uint32_t size; 
+    struct Block* next; 
 } Block;
 
 void init_memory();
 void* kmalloc(size_t size);
 void kfree(void* ptr);
 
-#endif // MEMORY_H
+#endif 

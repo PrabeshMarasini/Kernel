@@ -23,14 +23,14 @@ uint8_t bcd_to_bin(uint8_t val) {
     return (val & 0x0F) + ((val / 16) * 10);
 }
 
-struct tm get_rtc_time() {
+struct tm get_rtc_time() {  //Real Time clock
     struct tm time;
     time.tm_sec = bcd_to_bin(read_rtc_register(0x00));
     time.tm_min = bcd_to_bin(read_rtc_register(0x02));
     time.tm_hour = bcd_to_bin(read_rtc_register(0x04));
     time.tm_mday = bcd_to_bin(read_rtc_register(0x07));
     time.tm_mon = bcd_to_bin(read_rtc_register(0x08)) - 1;
-    time.tm_year = bcd_to_bin(read_rtc_register(0x09)) + 100; // Years since 1900
+    time.tm_year = bcd_to_bin(read_rtc_register(0x09)) + 100; 
     return time;
 }
 

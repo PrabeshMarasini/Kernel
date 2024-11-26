@@ -6,27 +6,25 @@
 
 #define SCREEN_HEIGHT 25
 #define SCREEN_WIDTH 80
-#define MAX_INPUT 2000
-#define BUFFER_SIZE 4096
+#define MAX_INPUT 200
+#define BUFFER_SIZE 100
 
 void clear_and_reset_screen(void);
 void textfile_scroll_screen(void);
 void textfile_scroll_horizontal(int direction);
 void display_save_message(const char *message);
 
-// Function to clear the entire screen with a white background
 void clear_screen(void) {
-    print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE); // Set white background
+    print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE); 
     for (int y = 0; y < SCREEN_HEIGHT; ++y) {
         for (int x = 0; x < SCREEN_WIDTH; ++x) {
             print_set_cursor(x, y);
-            print_char(' '); // Fill the screen with spaces
+            print_char(' ');
         }
     }
-    print_set_cursor(0, 0); // Reset cursor position
+    print_set_cursor(0, 0); 
 }
 
-// Function to scroll the screen up by one line
 void textfile_scroll_screen(void) {
     for (int y = 1; y < SCREEN_HEIGHT; ++y) {
         for (int x = 0; x < SCREEN_WIDTH; ++x) {
@@ -35,14 +33,12 @@ void textfile_scroll_screen(void) {
             print_char(ch);
         }
     }
-    // Clear the last line
     for (int x = 0; x < SCREEN_WIDTH; ++x) {
         print_set_cursor(x, SCREEN_HEIGHT - 1);
         print_char(' ');
     }
 }
 
-// Function to scroll the screen horizontally by one character
 void textfile_scroll_horizontal(int direction) {
     for (int y = 2; y < SCREEN_HEIGHT; ++y) {
         for (int x = 0; x < SCREEN_WIDTH - 1; ++x) {
@@ -57,25 +53,23 @@ void textfile_scroll_horizontal(int direction) {
     }
 }
 
-// Function to update the filename section
 void update_filename(const char *filename) {
-    print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE); // Set background for filename section
+    print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE); 
     print_set_cursor(0, 0);
     print_str(filename);
 }
 
-// Function to update the character count section
 void update_char_count(int count) {
-    static int last_count = -1; // Initialize to an invalid value
+    static int last_count = -1; 
 
     if (count == last_count) {
-        return; // No change in count, so no need to update
+        return; 
     }
 
     last_count = count;
     char count_str[20];
     
-    print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE); // Set background for count section
+    print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE); 
     print_set_cursor(SCREEN_WIDTH - 25, 0);
     print_str("Characters: ");
 
@@ -88,7 +82,6 @@ void update_char_count(int count) {
     if (i == 0) count_str[i++] = '0';
     count_str[i] = '\0';
 
-    // Reverse the count_str array
     for (int j = 0; j < i / 2; j++) {
         char tmp = count_str[j];
         count_str[j] = count_str[i - j - 1];
@@ -97,22 +90,18 @@ void update_char_count(int count) {
 
     print_str(count_str);
     for (int i = 0; i < 5; i++) {
-        print_char(' '); // Fill extra space for alignment
+        print_char(' '); 
     }
 }
 
-// Function to clear the screen and reset it
 void clear_and_reset_screen(void) {
-    clear_screen(); // Clear the screen
-    // Reset the screen colors
+    clear_screen();
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
     print_set_cursor(0, 0);
     print_str("Kernel v1");
 }
 
 void delay(int milliseconds) {
-    // Assuming the CPU runs at a certain number of cycles per millisecond
-    // You'll need to adjust this constant based on your actual CPU speed
     volatile int cycles = milliseconds * 1000;
     
     while (cycles > 0) {
@@ -121,37 +110,30 @@ void delay(int milliseconds) {
 }
 
 void display_save_message(const char *message) {
-    // Display the popup message
-    print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLUE); // White text on blue background
-    int popup_start_x = (SCREEN_WIDTH - 30) / 2; // Center the popup horizontally
-    int popup_start_y = (SCREEN_HEIGHT - 3) / 2; // Center the popup vertically
+    print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLUE); 
+    int popup_start_x = (SCREEN_WIDTH - 30) / 2; 
+    int popup_start_y = (SCREEN_HEIGHT - 3) / 2; 
     
-    // Top border of the dialog box
     for (int y = 0; y < 3; ++y) {
         print_set_cursor(popup_start_x, popup_start_y + y);
         for (int i = 0; i < 30; ++i) {
-            print_char(' '); // Fill the entire line with spaces
+            print_char(' ');
         }
     }
 
-    // Print the message at the center
-    print_set_cursor(popup_start_x + 1, popup_start_y + 1); // Adjust for border
+    print_set_cursor(popup_start_x + 1, popup_start_y + 1); 
     print_str(message);
 
-    // Wait for 5 seconds before clearing the popup
     delay(80000);
-
-    // Clear the popup message
-    print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE); // Reset color
+    print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE); 
     for (int y = popup_start_y; y <= popup_start_y + 2; ++y) {
         print_set_cursor(popup_start_x, y);
         for (int x = 0; x < 30; ++x) {
-            print_char(' '); // Clear the area
+            print_char(' '); 
         }
     }
 }
 
-// Function to save the current content to the file
 void save_current_file(const char *filename, const uint8_t *content, int length) {
     int save_result = save_file(filename, content, length);
     if (save_result < 0) {
@@ -163,7 +145,7 @@ void save_current_file(const char *filename, const uint8_t *content, int length)
 
 void update_text_content(const uint8_t *buffer, int length, int *final_x, int *final_y) {
     int cursor_x = 0;
-    int cursor_y = 2; // Start after header
+    int cursor_y = 2; 
 
     print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE);
     print_set_cursor(0, cursor_y);
@@ -189,75 +171,64 @@ void update_text_content(const uint8_t *buffer, int length, int *final_x, int *f
             }
         }
     }
-    
-    // Store final cursor position
+   
     *final_x = cursor_x;
     *final_y = cursor_y;
 }
 
 void display_textfile(const char *filename) {
-    char input[MAX_INPUT] = {0};     // Buffer for input
+    char input[MAX_INPUT] = {0};    
     int input_length = 0;
     int cursor_x = 0;
     int cursor_y = 2;
     char key;
     uint8_t file_buffer[BUFFER_SIZE];
 
-    // Clear and initialize the screen
     clear_screen();
     update_filename(filename);
 
-    // Open the file to read
     int file_index = fs_open(filename);
     if (file_index == -1) {
-        // Handle the case where the file can't be opened
         print_set_color(PRINT_COLOR_RED, PRINT_COLOR_WHITE);
         print_set_cursor(0, 0);
         print_str("Error: Unable to open file.");
-        while (1); // Halt or handle accordingly
+        while (1); 
     }
 
-    // Read file and update content section
-    int read_result = fs_read(file_index, file_buffer, BUFFER_SIZE);  // Use file_index here
+    int read_result = fs_read(file_index, file_buffer, BUFFER_SIZE);  
     if (read_result > 0) {
-        update_text_content(file_buffer, read_result, &cursor_x, &cursor_y);  // Get final cursor position
-        // Copy the content into the input buffer
+        update_text_content(file_buffer, read_result, &cursor_x, &cursor_y);  
         for (int i = 0; i < read_result; i++) {
-            if (input_length < MAX_INPUT - 1) { // Prevent buffer overflow
+            if (input_length < MAX_INPUT - 1) { 
                 input[input_length++] = file_buffer[i];
             } else {
-                // Handle buffer overflow
                 print_set_color(PRINT_COLOR_RED, PRINT_COLOR_WHITE);
                 print_set_cursor(0, SCREEN_HEIGHT - 1);
                 print_str("Error: Input buffer overflow");
-                while (1); // Halt or handle accordingly
+                while (1);
             }
         }
     }
 
-    // Update the separator line
     print_set_cursor(0, 1);
     print_set_color(PRINT_COLOR_RED, PRINT_COLOR_WHITE);
     for (int i = 0; i < SCREEN_WIDTH; ++i) {
         print_char('-');
     }
     print_set_color(PRINT_COLOR_BLACK, PRINT_COLOR_WHITE);
-
-    // Initial update of character count
     update_char_count(input_length);
 
     while (1) {
         print_set_cursor(cursor_x, cursor_y);
         key = keyboard_get_char();
 
-        if (key == 0x1B) {  // Escape key
-            // Clear the screen and reset
+        if (key == 0x1B) {  
+            fs_close(file_index);  
             clear_screen();
-            clear_and_reset_screen(); // Ensure screen colors are reset
-            run_shell();  // Call the function to switch to the shell
-            return;  // Exit display_textfile function
+            clear_and_reset_screen(); 
+            run_shell();  
+            return;  
         } else if (key == '\n') {
-            // Handle newline
             cursor_y++;
             cursor_x = 0;
             if (cursor_y >= SCREEN_HEIGHT) {
@@ -265,7 +236,7 @@ void display_textfile(const char *filename) {
                 cursor_y = SCREEN_HEIGHT - 1;
             }
             if (input_length < MAX_INPUT - 1) {
-                input[input_length++] = key; // Store the input
+                input[input_length++] = key; 
             }
         } else if (key == '\b' && input_length > 0) {
             input[--input_length] = '\0';
@@ -277,11 +248,11 @@ void display_textfile(const char *filename) {
             }
             print_set_cursor(cursor_x, cursor_y);
             print_char(' ');
-        } else if (key == 0x13) {  // Ctrl + S for saving
+        } else if (key == 0x13) {  
             save_current_file(filename, (const uint8_t *)input, input_length);
-        } else if (key >= 32 && key <= 126) {  // Printable characters
-            if (input_length < MAX_INPUT - 1) { // Ensure buffer has space
-                input[input_length++] = key;  // Store the input
+        } else if (key >= 32 && key <= 126) {  
+            if (input_length < MAX_INPUT - 1) { 
+                input[input_length++] = key;  
                 print_char(key);
                 cursor_x++;
                 if (cursor_x >= SCREEN_WIDTH) {
@@ -295,6 +266,6 @@ void display_textfile(const char *filename) {
             }
         }
 
-        update_char_count(input_length); // Update the character count
+        update_char_count(input_length); 
     }
 }

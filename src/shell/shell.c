@@ -186,9 +186,9 @@ void run_shell()
                     {
                         list_files_command();
                     }
-                    else if (strncmp(buffer, "open ", 5) == 0)
+                    else if (strncmp(buffer, "apple ", 6) == 0)
                     {
-                        open_file_command(&buffer[5]);
+                        open_file_command(&buffer[6]);
                     }
                     else if (strncmp(buffer, "delete ", 7) == 0)
                     {
@@ -477,7 +477,7 @@ void create_file_command(const char *filename)
 
 
 int open_file_command(const char *filename) {
-    int file_index = fs_open(filename);  // Now returns an index to file_table
+    int file_index = fs_open(filename);  
 
     if (file_index == -1) {
         print_line_with_color(0, cursor_y, "Error: File ", PRINT_COLOR_RED, PRINT_COLOR_BLACK);
@@ -494,13 +494,10 @@ int open_file_command(const char *filename) {
         print_set_cursor(cursor_x, cursor_y);
         print_str("Shell> ");
         cursor_x = strlen("Shell> ");
-        return -1;  // Return an integer error code
+        return -1;  
     }
 
-    // Access the file using file_table index
     FileEntry *file = &file_table[file_index];
-
-    // Call display_textfile with the filename or the content as required
     display_textfile(filename);
 
     cursor_y++;
@@ -513,7 +510,7 @@ int open_file_command(const char *filename) {
     print_set_cursor(cursor_x, cursor_y);
     print_str("Shell> ");
     cursor_x = strlen("Shell> ");
-    return 0;  // Return an integer success code
+    return 0;  
 }
 
 

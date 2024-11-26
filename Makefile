@@ -1,4 +1,3 @@
-# Define source files
 kernel_source_files := $(shell find src/impl/kernel -name *.c)
 kernel_object_files := $(patsubst src/impl/kernel/%.c, build/kernel/%.o, $(kernel_source_files))
 x86_64_c_source_files := $(shell find src/impl/x86_64 -name *.c)
@@ -20,15 +19,12 @@ datetime_object_files := build/datetime/datetime.o
 e1000_source_files := $(shell find src/drivers/net/e1000 -name *.c)
 e1000_object_files := $(patsubst src/drivers/net/e1000/%.c, build/drivers/net/e1000/%.o, $(e1000_source_files))
 
-# Add disk driver
 disk_source_files := src/drivers/diskdriver/disk.c
 disk_object_files := build/drivers/diskdriver/disk.o
 
-# Define all object files
 x86_64_object_files := $(x86_64_c_object_files) $(x86_64_asm_object_files)
 all_object_files := $(kernel_object_files) $(x86_64_object_files) $(shell_object_files) $(keyboard_object_files) $(textfile_object_files) $(filesystem_object_files) $(memory_object_files) $(datetime_object_files) $(e1000_object_files) $(disk_object_files)
 
-# Compilation rules for C files
 build/kernel/%.o: src/impl/kernel/%.c
 	mkdir -p $(dir $@)
 	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
@@ -65,17 +61,14 @@ build/drivers/net/e1000/%.o: src/drivers/net/e1000/%.c
 	mkdir -p $(dir $@)
 	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
 
-# Add compilation rule for disk driver
 build/drivers/diskdriver/%.o: src/drivers/diskdriver/%.c
 	mkdir -p $(dir $@)
 	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
 
-# Compilation rules for ASM files
 build/x86_64/%.o: src/impl/x86_64/%.asm
 	mkdir -p $(dir $@)
 	nasm -f elf64 $< -o $@
 
-# Build target for x86_64
 .PHONY: build-x86_64
 build-x86_64: $(all_object_files)
 	mkdir -p dist/x86_64
@@ -83,16 +76,13 @@ build-x86_64: $(all_object_files)
 	cp dist/x86_64/kernel.bin targets/x86_64/iso/boot/kernel.bin
 	grub-mkrescue /usr/lib/grub/i386-pc -o dist/x86_64/kernel.iso targets/x86_64/iso
 
-# Build target for textfile
 .PHONY: build-textfile
 build-textfile: $(textfile_object_files)
 	mkdir -p build/textfile
 
-# Variables
 DISK_IMG = disk.img
 DISK_SIZE = 100M
 
-# Run target to execute kernel in QEMU
 .PHONY: run create-disk
 run: build-x86_64 create-disk
 	@echo "Starting QEMU with kernel and disk image..."
@@ -102,7 +92,6 @@ run: build-x86_64 create-disk
 		-hda $(DISK_IMG) \
 		-D qemu.log
 
-# Create disk image only if it doesn't exist
 create-disk:
 	@if [ ! -f $(DISK_IMG) ]; then \
 		echo "Creating new disk image ($(DISK_SIZE))..."; \
@@ -112,7 +101,6 @@ create-disk:
 		echo "✓ Using existing disk image: $(DISK_IMG)"; \
 	fi
 
-# Clean target to remove disk image and start fresh
 .PHONY: clean
 clean:
 	@if [ -f $(DISK_IMG) ]; then \

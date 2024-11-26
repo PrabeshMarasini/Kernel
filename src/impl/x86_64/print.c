@@ -23,16 +23,13 @@
 #define PRINT_COLOR_LIGHT_YELLOW 14
 #define PRINT_COLOR_WHITE 15
 
-// Global variables
 static int current_color = PRINT_COLOR_WHITE | (PRINT_COLOR_BLACK << 4);
 static int cursor_x = 0;
 static int cursor_y = 0;
 
-// Function prototypes
 static void outb(unsigned short port, unsigned char val);
 static unsigned char inb(unsigned short port);
 
-// Print functions
 void print_clear() {
     unsigned char* video_memory = (unsigned char*)VGA_BUFFER;
     for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) {
@@ -107,10 +104,7 @@ void print_update_cursor() {
 }
 
 void print_clear_screen() {
-    // Set color to white on black for clearing the screen
     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
-
-    // Clear the screen by filling with spaces
     unsigned char* video_memory = (unsigned char*)VGA_BUFFER;
     for (int y = 0; y < VGA_HEIGHT; y++) {
         for (int x = 0; x < VGA_WIDTH; x++) {
@@ -127,12 +121,11 @@ void print_clear_screen() {
 }
 
 char print_get_char(int x, int y) {
-    if (x >= VGA_WIDTH || y >= VGA_HEIGHT) return '\0'; // Out of bounds check
+    if (x >= VGA_WIDTH || y >= VGA_HEIGHT) return '\0'; 
     unsigned char* video_memory = (unsigned char*)VGA_BUFFER;
-    return video_memory[(y * VGA_WIDTH + x) * 2]; // Get the character
+    return video_memory[(y * VGA_WIDTH + x) * 2]; 
 }
 
-// Inline assembly functions for port I/O
 static void outb(unsigned short port, unsigned char val) {
     asm volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
 }
