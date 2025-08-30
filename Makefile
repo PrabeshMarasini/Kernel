@@ -8,6 +8,10 @@ shell_source_files := $(shell find src/shell -name *.c)
 shell_object_files := $(patsubst src/shell/%.c, build/shell/%.o, $(shell_source_files))
 textfile_source_files := src/textfile/textfile.c
 textfile_object_files := build/textfile/textfile.o
+calculator_source_files := src/calculator/calculator.c
+calculator_object_files := build/calculator/calculator.o
+snake_source_files := src/snake/snake.c
+snake_object_files := build/snake/snake.o
 filesystem_source_files := src/filesystem/filesystem.c
 filesystem_object_files := build/filesystem/filesystem.o
 keyboard_source_files := $(shell find src/drivers/keyboard -name *.c)
@@ -26,7 +30,7 @@ graphics_source_files := $(shell find src/drivers/graphics -name *.c)
 graphics_object_files := $(patsubst src/drivers/graphics/%.c, build/drivers/graphics/%.o, $(graphics_source_files))
 
 x86_64_object_files := $(x86_64_c_object_files) $(x86_64_asm_object_files)
-all_object_files := $(kernel_object_files) $(x86_64_object_files) $(shell_object_files) $(keyboard_object_files) $(textfile_object_files) $(filesystem_object_files) $(memory_object_files) $(datetime_object_files) $(e1000_object_files) $(disk_object_files) $(graphics_object_files)
+all_object_files := $(kernel_object_files) $(x86_64_object_files) $(shell_object_files) $(keyboard_object_files) $(textfile_object_files) $(calculator_object_files) $(snake_object_files) $(filesystem_object_files) $(memory_object_files) $(datetime_object_files) $(e1000_object_files) $(disk_object_files) $(graphics_object_files)
 
 build/kernel/%.o: src/impl/kernel/%.c
 	mkdir -p $(dir $@)
@@ -45,6 +49,14 @@ build/drivers/keyboard/%.o: src/drivers/keyboard/%.c
 	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
 
 build/textfile/%.o: src/textfile/%.c
+	mkdir -p $(dir $@)
+	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
+
+build/calculator/%.o: src/calculator/%.c
+	mkdir -p $(dir $@)
+	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
+
+build/snake/%.o: src/snake/%.c
 	mkdir -p $(dir $@)
 	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
 
@@ -86,6 +98,14 @@ build-x86_64: $(all_object_files)
 .PHONY: build-textfile
 build-textfile: $(textfile_object_files)
 	mkdir -p build/textfile
+
+.PHONY: build-calculator
+build-calculator: $(calculator_object_files)
+	mkdir -p build/calculator
+
+.PHONY: build-snake
+build-snake: $(snake_object_files)
+	mkdir -p build/snake
 
 DISK_IMG = disk.img
 DISK_SIZE = 100M

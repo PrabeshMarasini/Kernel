@@ -3,6 +3,8 @@
 #include "../drivers/graphics/graphics.h"
 #include "../drivers/graphics/gfx_print.h"
 #include "../datetime/datetime.h"
+#include "../calculator/calculator.h"
+#include "../snake/snake.h"
 #include <string.h>
 
 void run_shell();
@@ -214,7 +216,10 @@ void kernel_main() {
     int cursor_position = 0; // Current position in buffer
     char buffer[128];
     int buffer_index = 0;
-    const char command[] = "shell";
+    const char shell_command[] = "shell";
+    const char calculator_command[] = "calculator";
+    const char sci_calc_command[] = "scicalc";
+    const char snake_command[] = "snake";
 
     print_set_cursor(cursor_x, cursor_y);
     print_enable_cursor(14, 15);
@@ -256,9 +261,24 @@ void kernel_main() {
                 }
             } else if (c == '\n') {
                 buffer[buffer_index] = '\0';
-                if (strcmp(buffer, command) == 0) {
+                if (strcmp(buffer, shell_command) == 0) {
                     reset_screen();
                     run_shell();
+                    initialize_kernel_interface();
+                    cursor_y = 1;
+                } else if (strcmp(buffer, calculator_command) == 0) {
+                    reset_screen();
+                    run_calculator();
+                    initialize_kernel_interface();
+                    cursor_y = 1;
+                } else if (strcmp(buffer, sci_calc_command) == 0) {
+                    reset_screen();
+                    run_scientific_calculator();
+                    initialize_kernel_interface();
+                    cursor_y = 1;
+                } else if (strcmp(buffer, snake_command) == 0) {
+                    reset_screen();
+                    run_snake_game();
                     initialize_kernel_interface();
                     cursor_y = 1;
                 }
