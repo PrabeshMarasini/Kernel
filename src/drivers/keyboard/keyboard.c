@@ -43,10 +43,10 @@ static inline unsigned char inb(unsigned short port) {
     return ret;
 }
 
-char keyboard_get_char() {
+unsigned char keyboard_get_char() {
     static int shift = 0;   
     static int ctrl = 0;    
-    char c = 0;
+    unsigned char c = 0;
 
     // Quick check if keyboard has data
     if (!(inb(KEYBOARD_STATUS_PORT) & 1)) {
@@ -71,7 +71,7 @@ char keyboard_get_char() {
             ctrl = 1;
         } else if (scancode == UP_ARROW || scancode == DOWN_ARROW || scancode == LEFT_ARROW || scancode == RIGHT_ARROW ||
                    scancode == PAGE_UP || scancode == PAGE_DOWN || scancode == HOME_KEY || scancode == END_KEY) {
-            // Handle special navigation keys
+            // Handle special navigation keys - return SPECIAL CODES, not scancodes
             if (ctrl) {
                 // Handle Ctrl combinations
                 if (scancode == HOME_KEY) {
@@ -82,9 +82,11 @@ char keyboard_get_char() {
                     c = scancode; // Other keys with Ctrl (future expansion)
                 }
             } else {
-                c = scancode; // Regular navigation keys
+                // Return SPECIAL NAVIGATION CODES (not conflicting ASCII values)
+                c = scancode | 0x80; // Set high bit to distinguish from ASCII
             }
         } else if (scancode < 120) { // Bounds check for our keymap size
+            // CHARACTER GENERATION - only for actual typeable keys
             if (shift) {
                 c = shift_keymap[scancode];
                 // Enhanced fallback for common letters if mapping failed
@@ -124,7 +126,7 @@ char keyboard_get_char() {
 }
 
 void handle_keypress() {
-    char c = keyboard_get_char();
+    unsigned char c = keyboard_get_char();
     if (c == 0x1B) {
         switch_to_shell();
     } else if (c == 0x13) {

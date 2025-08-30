@@ -211,6 +211,7 @@ void kernel_main() {
 
     int cursor_x = 1;
     int cursor_y = 1;
+    int cursor_position = 0; // Current position in buffer
     char buffer[128];
     int buffer_index = 0;
     const char command[] = "shell";
@@ -228,18 +229,29 @@ void kernel_main() {
         }
         update_counter = (update_counter + 1) % 5000; // Reduced frequency
 
-        char c = keyboard_get_char();
+        unsigned char c = keyboard_get_char();
         if (c != 0) {
-            // Only update screen when we have input
             print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLUE);
             
             if (c == '\b') {
-                if (buffer_index > 0 && cursor_x > 1) {
+                if (cursor_position > 0) {
+                    // Remove character at cursor position
+                    for (int i = cursor_position - 1; i < buffer_index - 1; i++) {
+                        buffer[i] = buffer[i + 1];
+                    }
                     buffer_index--;
-                    cursor_x--;
+                    cursor_position--;
+                    
+                    // Redraw the line from prompt position
+                    print_set_cursor(1, cursor_y);
+                    for (int i = 0; i < buffer_index; i++) {
+                        print_char(buffer[i]);
+                    }
+                    print_char(' '); // Clear the last character
+                    
+                    // Update cursor position
+                    cursor_x = 1 + cursor_position;
                     print_set_cursor(cursor_x, cursor_y);
-                    print_char(' ');
-                    print_set_cursor(cursor_x, cursor_y); // Reset cursor position
                     print_update_cursor();
                 }
             } else if (c == '\n') {
@@ -251,6 +263,7 @@ void kernel_main() {
                     cursor_y = 1;
                 }
                 buffer_index = 0;
+                cursor_position = 0;
                 cursor_y++;
                 cursor_x = 0;
                 print_set_cursor(cursor_x, cursor_y);
@@ -258,13 +271,51 @@ void kernel_main() {
                 cursor_x = 1;
                 print_set_cursor(cursor_x, cursor_y);
                 print_update_cursor();
-            } else if (cursor_x < 79) {
-                buffer[buffer_index++] = c;
+            } else if (c == NAV_LEFT_ARROW) {
+                if (cursor_position > 0) {
+                    cursor_position--;
+                    cursor_x--;
+                    print_set_cursor(cursor_x, cursor_y);
+                }
+            } else if (c == NAV_RIGHT_ARROW) {
+                if (cursor_position < buffer_index) {
+                    cursor_position++;
+                    cursor_x++;
+                    print_set_cursor(cursor_x, cursor_y);
+                }
+            } else if (c == NAV_HOME_KEY) {
+                cursor_position = 0;
+                cursor_x = 1;
                 print_set_cursor(cursor_x, cursor_y);
-                print_char(c);
-                cursor_x++;
+            } else if (c == NAV_END_KEY) {
+                cursor_position = buffer_index;
+                cursor_x = 1 + cursor_position;
                 print_set_cursor(cursor_x, cursor_y);
-                print_update_cursor();
+            } else if (c == NAV_UP_ARROW || c == NAV_DOWN_ARROW || c == NAV_PAGE_UP || c == NAV_PAGE_DOWN) {
+                // Ignore other navigation keys in main interface
+            } else if (c > 127) {
+                // Unknown navigation key with high bit set - ignore it
+            } else if (cursor_x < 79 && c >= 32 && c <= 126) {
+                // Insert character at cursor position
+                if (buffer_index < 127) { // Leave space for null terminator
+                    for (int i = buffer_index; i > cursor_position; i--) {
+                        buffer[i] = buffer[i - 1];
+                    }
+                    buffer[cursor_position] = c;
+                    buffer_index++;
+                    cursor_position++;
+                    
+                    // Redraw the line from prompt position
+                    print_set_cursor(1, cursor_y);
+                    for (int i = 0; i < buffer_index; i++) {
+                        print_char(buffer[i]);
+                    }
+                    
+                    // Update cursor position
+                    cursor_x = 1 + cursor_position;
+                    print_set_cursor(cursor_x, cursor_y);
+                    print_update_cursor();
+                }
             }
         } else {
             // Small delay when no input to reduce CPU usage

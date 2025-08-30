@@ -16,7 +16,7 @@ void textfile_scroll_horizontal(int direction);
 void display_save_message(const char *message);
 void sync_cursor_position(int x, int y);
 void force_text_mode(void);
-void navigate_cursor(char key, char* input, int input_length, int* cursor_x, int* cursor_y, int* cursor_position);
+void navigate_cursor(unsigned char key, char* input, int input_length, int* cursor_x, int* cursor_y, int* cursor_position);
 void find_line_start_end(char* input, int input_length, int current_pos, int* line_start, int* line_end);
 int calculate_cursor_position_from_coordinates(char* input, int input_length, int target_x, int target_y);
 void get_cursor_coordinates_from_position(char* input, int position, int* x, int* y);
@@ -107,12 +107,12 @@ void get_cursor_coordinates_from_position(char* input, int position, int* x, int
     *y = current_y;
 }
 
-void navigate_cursor(char key, char* input, int input_length, int* cursor_x, int* cursor_y, int* cursor_position) {
+void navigate_cursor(unsigned char key, char* input, int input_length, int* cursor_x, int* cursor_y, int* cursor_position) {
     int new_position = *cursor_position;
     int line_start, line_end;
     
     switch (key) {
-        case UP_ARROW:
+        case NAV_UP_ARROW:
             if (*cursor_y > 2) {
                 int target_y = *cursor_y - 1;
                 new_position = calculate_cursor_position_from_coordinates(input, input_length, *cursor_x, target_y);
@@ -121,7 +121,7 @@ void navigate_cursor(char key, char* input, int input_length, int* cursor_x, int
             }
             break;
             
-        case DOWN_ARROW:
+        case NAV_DOWN_ARROW:
             if (*cursor_y < SCREEN_HEIGHT - 1) {
                 int target_y = *cursor_y + 1;
                 new_position = calculate_cursor_position_from_coordinates(input, input_length, *cursor_x, target_y);
@@ -132,7 +132,7 @@ void navigate_cursor(char key, char* input, int input_length, int* cursor_x, int
             }
             break;
             
-        case LEFT_ARROW:
+        case NAV_LEFT_ARROW:
             if (*cursor_position > 0) {
                 (*cursor_position)--;
                 if (*cursor_x > 0) {
@@ -151,7 +151,7 @@ void navigate_cursor(char key, char* input, int input_length, int* cursor_x, int
             }
             break;
             
-        case RIGHT_ARROW:
+        case NAV_RIGHT_ARROW:
             if (*cursor_position < input_length) {
                 (*cursor_position)++;
                 (*cursor_x)++;
@@ -166,19 +166,19 @@ void navigate_cursor(char key, char* input, int input_length, int* cursor_x, int
             }
             break;
             
-        case HOME_KEY:
+        case NAV_HOME_KEY:
             find_line_start_end(input, input_length, *cursor_position, &line_start, &line_end);
             *cursor_position = line_start;
             get_cursor_coordinates_from_position(input, *cursor_position, cursor_x, cursor_y);
             break;
             
-        case END_KEY:
+        case NAV_END_KEY:
             find_line_start_end(input, input_length, *cursor_position, &line_start, &line_end);
             *cursor_position = line_end;
             get_cursor_coordinates_from_position(input, *cursor_position, cursor_x, cursor_y);
             break;
             
-        case PAGE_UP:
+        case NAV_PAGE_UP:
             {
                 int lines_to_move = SCREEN_HEIGHT - 3; // Leave room for header/footer
                 int target_y = (*cursor_y - lines_to_move < 2) ? 2 : *cursor_y - lines_to_move;
@@ -188,7 +188,7 @@ void navigate_cursor(char key, char* input, int input_length, int* cursor_x, int
             }
             break;
             
-        case PAGE_DOWN:
+        case NAV_PAGE_DOWN:
             {
                 int lines_to_move = SCREEN_HEIGHT - 3; // Leave room for header/footer
                 int target_y = *cursor_y + lines_to_move;
@@ -438,7 +438,7 @@ void display_textfile(const char *filename) {
     int cursor_x = 0;
     int cursor_y = 2;
     int cursor_position = 0; // Track position in input buffer
-    char key;
+    unsigned char key;
     uint8_t file_buffer[BUFFER_SIZE];
 
     // Ensure we're in VGA text mode for the text editor
@@ -545,9 +545,15 @@ void display_textfile(const char *filename) {
             sync_cursor_position(cursor_x, cursor_y);
         } else if (key == 0x13) {  
             save_current_file(filename, (const uint8_t *)input, input_length);
-        } else if ((key >= 32 && key <= 126) || (key >= 'A' && key <= 'Z') || (key >= 'a' && key <= 'z')) {  
-            // Insert character at cursor position (printable ASCII + explicit letter ranges)
-            // Check this BEFORE navigation keys to prevent conflicts with Q, O, P, etc.
+        } else if (key == NAV_UP_ARROW || key == NAV_DOWN_ARROW || key == NAV_LEFT_ARROW || key == NAV_RIGHT_ARROW ||
+                   key == NAV_PAGE_UP || key == NAV_PAGE_DOWN || key == NAV_HOME_KEY || key == NAV_END_KEY ||
+                   key == CTRL_HOME || key == CTRL_END) {
+            // Handle navigation keys BEFORE character input to avoid conflicts
+            navigate_cursor(key, input, input_length, &cursor_x, &cursor_y, &cursor_position);
+            sync_cursor_position(cursor_x, cursor_y);
+        } else if ((key >= 32 && key <= 126)) {  
+            // Insert character at cursor position (strict printable ASCII only)
+            // Check this AFTER navigation keys to prevent conflicts with navigation scancodes
             if (input_length < MAX_INPUT - 1) {
                 // Shift characters to the right
                 for (int i = input_length; i > cursor_position; i--) {
@@ -573,12 +579,6 @@ void display_textfile(const char *filename) {
                 get_cursor_coordinates_from_position(input, cursor_position, &cursor_x, &cursor_y);
                 sync_cursor_position(cursor_x, cursor_y);
             }
-        } else if (key == UP_ARROW || key == DOWN_ARROW || key == LEFT_ARROW || key == RIGHT_ARROW ||
-                   key == PAGE_UP || key == PAGE_DOWN || key == HOME_KEY || key == END_KEY ||
-                   key == CTRL_HOME || key == CTRL_END) {
-            // Handle navigation keys AFTER character input to avoid conflicts
-            navigate_cursor(key, input, input_length, &cursor_x, &cursor_y, &cursor_position);
-            sync_cursor_position(cursor_x, cursor_y);
         } else if (key == 0) {
             // Add small delay when no input
             for (volatile int i = 0; i < 300; i++) {}

@@ -42,7 +42,7 @@ void set_first_line_color();
 void start_shell();
 void create_file_command(const char *filename);
 void dt_command(void);
-void handle_command_history(char key, char *buffer, int *buffer_index);
+void handle_command_history(unsigned char key, char *buffer, int *buffer_index);
 void print_int(int num);
 void itoa(int num, char *str, int base);
 
@@ -134,25 +134,37 @@ void run_shell()
 
         char buffer[MAX_INPUT] = {0};
         int buffer_index = 0;
+        int cursor_position = 0; // Current cursor position in buffer
 
         while (1)
         {
-            char c = keyboard_get_char();
+            unsigned char c = keyboard_get_char();
 
             if (c != 0)
             {
                 if (c == '\b')
                 {
-                    if (buffer_index > 0)
+                    if (cursor_position > 0)
                     {
-                        buffer_index--;
-                        if (cursor_x > strlen(prompt))
+                        // Remove character at cursor position
+                        for (int i = cursor_position - 1; i < buffer_index - 1; i++)
                         {
-                            cursor_x--;
-                            print_set_cursor(cursor_x, cursor_y);
-                            print_char(' ');
-                            print_set_cursor(cursor_x, cursor_y);
+                            buffer[i] = buffer[i + 1];
                         }
+                        buffer_index--;
+                        cursor_position--;
+                        
+                        // Redraw the line from prompt position
+                        print_set_cursor(strlen(prompt), cursor_y);
+                        for (int i = 0; i < buffer_index; i++)
+                        {
+                            print_char(buffer[i]);
+                        }
+                        print_char(' '); // Clear the last character
+                        
+                        // Update cursor position
+                        cursor_x = strlen(prompt) + cursor_position;
+                        print_set_cursor(cursor_x, cursor_y);
                     }
                 }
                 else if (c == '\n')
@@ -258,23 +270,74 @@ void run_shell()
                     }
 
                     buffer_index = 0;
+                    cursor_position = 0; // Reset cursor position
                     cursor_x = 0;
                     print_set_color(PRINT_COLOR_WHITE, PRINT_COLOR_BLACK);
                     print_set_cursor(cursor_x, cursor_y);
                     print_str(prompt);
                     cursor_x = strlen(prompt);
                 }
-                else if (c == UP_ARROW || c == DOWN_ARROW)
+                else if (c == NAV_UP_ARROW || c == NAV_DOWN_ARROW)
                 {
                     handle_command_history(c, buffer, &buffer_index);
+                    cursor_position = buffer_index; // Reset cursor to end after history navigation
+                    cursor_x = strlen(prompt) + cursor_position;
+                    print_set_cursor(cursor_x, cursor_y);
+                }
+                else if (c == NAV_LEFT_ARROW)
+                {
+                    if (cursor_position > 0)
+                    {
+                        cursor_position--;
+                        cursor_x--;
+                        print_set_cursor(cursor_x, cursor_y);
+                    }
+                }
+                else if (c == NAV_RIGHT_ARROW)
+                {
+                    if (cursor_position < buffer_index)
+                    {
+                        cursor_position++;
+                        cursor_x++;
+                        print_set_cursor(cursor_x, cursor_y);
+                    }
+                }
+                else if (c == NAV_HOME_KEY)
+                {
+                    cursor_position = 0;
+                    cursor_x = strlen(prompt);
+                    print_set_cursor(cursor_x, cursor_y);
+                }
+                else if (c == NAV_END_KEY)
+                {
+                    cursor_position = buffer_index;
+                    cursor_x = strlen(prompt) + cursor_position;
+                    print_set_cursor(cursor_x, cursor_y);
                 }
                 else
                 {
-                    if (buffer_index < MAX_INPUT - 1 && cursor_x < SCREEN_WIDTH - 1)
+                    // Only accept printable ASCII characters (32-126) to avoid navigation key conflicts
+                    if (buffer_index < MAX_INPUT - 1 && cursor_x < SCREEN_WIDTH - 1 && c >= 32 && c <= 126)
                     {
-                        buffer[buffer_index++] = c;
-                        print_char(c);
-                        cursor_x++;
+                        // Insert character at cursor position
+                        for (int i = buffer_index; i > cursor_position; i--)
+                        {
+                            buffer[i] = buffer[i - 1];
+                        }
+                        buffer[cursor_position] = c;
+                        buffer_index++;
+                        cursor_position++;
+                        
+                        // Redraw the line from current position
+                        print_set_cursor(strlen(prompt), cursor_y);
+                        for (int i = 0; i < buffer_index; i++)
+                        {
+                            print_char(buffer[i]);
+                        }
+                        
+                        // Update cursor position
+                        cursor_x = strlen(prompt) + cursor_position;
+                        print_set_cursor(cursor_x, cursor_y);
                     }
                 }
             } else {
@@ -285,18 +348,18 @@ void run_shell()
     }
 }
 
-void handle_command_history(char key, char *buffer, int *buffer_index)
+void handle_command_history(unsigned char key, char *buffer, int *buffer_index)
 {
     static const int prompt_len = 7; // "Shell> " length
     
-    if (key == UP_ARROW)
+    if (key == NAV_UP_ARROW)
     {
         if (history_index > 0)
         {
             history_index--;
         }
     }
-    else if (key == DOWN_ARROW)
+    else if (key == NAV_DOWN_ARROW)
     {
         if (history_index < history_count)
         {
