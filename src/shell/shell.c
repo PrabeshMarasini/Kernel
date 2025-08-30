@@ -1,6 +1,8 @@
 #include "../textfile/textfile.h"
 #include "../intf/print.h"
 #include "../drivers/keyboard/keyboard.h"
+#include "../drivers/graphics/graphics.h"
+#include "../drivers/graphics/gfx_print.h"
 #include "../filesystem/filesystem.h"
 #include <string.h>
 #include <stdlib.h>
@@ -186,9 +188,9 @@ void run_shell()
                     {
                         list_files_command();
                     }
-                    else if (strncmp(buffer, "apple ", 6) == 0)
+                    else if (strncmp(buffer, "open ", 5) == 0)
                     {
-                        open_file_command(&buffer[6]);
+                        open_file_command(&buffer[5]);
                     }
                     else if (strncmp(buffer, "delete ", 7) == 0)
                     {
@@ -197,6 +199,50 @@ void run_shell()
                     else if (strncmp(buffer, "clr", 3) == 0)
                     {
                         clear_screen_but_keep_first_line();
+                    }
+                    else if (strncmp(buffer, "font-demo", 9) == 0)
+                    {
+                        font_demo_command();
+                    }
+                    else if (strncmp(buffer, "font-small", 10) == 0)
+                    {
+                        font_size_command(FONT_SIZE_SMALL);
+                    }
+                    else if (strncmp(buffer, "font-medium", 11) == 0)
+                    {
+                        font_size_command(FONT_SIZE_MEDIUM);
+                    }
+                    else if (strncmp(buffer, "font-large", 10) == 0)
+                    {
+                        font_size_command(FONT_SIZE_LARGE);
+                    }
+                    else if (strncmp(buffer, "font-xlarge", 11) == 0)
+                    {
+                        font_size_command(FONT_SIZE_XLARGE);
+                    }
+                    else if (strncmp(buffer, "font-bold", 9) == 0)
+                    {
+                        font_weight_command(FONT_WEIGHT_BOLD);
+                    }
+                    else if (strncmp(buffer, "font-normal", 11) == 0)
+                    {
+                        font_weight_command(FONT_WEIGHT_NORMAL);
+                    }
+                    else if (strncmp(buffer, "font-aa-on", 10) == 0)
+                    {
+                        font_antialiasing_command(1);
+                    }
+                    else if (strncmp(buffer, "font-aa-off", 11) == 0)
+                    {
+                        font_antialiasing_command(0);
+                    }
+                    else if (strncmp(buffer, "font-reset", 10) == 0)
+                    {
+                        font_reset_command();
+                    }
+                    else if (strncmp(buffer, "help", 4) == 0)
+                    {
+                        help_command();
                     }
                     else if (buffer_index > 0)
                     {
@@ -231,6 +277,9 @@ void run_shell()
                         cursor_x++;
                     }
                 }
+            } else {
+                // Add small delay when no input to reduce CPU usage
+                for (volatile int i = 0; i < 500; i++) {}
             }
         }
     }
@@ -238,6 +287,8 @@ void run_shell()
 
 void handle_command_history(char key, char *buffer, int *buffer_index)
 {
+    static const int prompt_len = 7; // "Shell> " length
+    
     if (key == UP_ARROW)
     {
         if (history_index > 0)
@@ -253,20 +304,32 @@ void handle_command_history(char key, char *buffer, int *buffer_index)
         }
     }
 
-    while (cursor_x > strlen("Shell> "))
+    // Clear current input more efficiently
+    unsigned char* video_memory = (unsigned char*)0xB8000;
+    unsigned char color = PRINT_COLOR_WHITE | (PRINT_COLOR_BLACK << 4);
+    
+    for (int x = prompt_len; x < SCREEN_WIDTH; x++)
     {
-        cursor_x--;
-        print_set_cursor(cursor_x, cursor_y);
-        print_char(' ');
+        video_memory[(cursor_y * SCREEN_WIDTH + x) * 2] = ' ';
+        video_memory[(cursor_y * SCREEN_WIDTH + x) * 2 + 1] = color;
     }
 
-    cursor_x = strlen("Shell> ");
+    cursor_x = prompt_len;
     print_set_cursor(cursor_x, cursor_y);
 
     if (history_index >= 0 && history_index < history_count)
     {
-        strncpy(buffer, command_history[history_index % HISTORY_SIZE], MAX_INPUT);
-        *buffer_index = strlen(buffer);
+        // Fast string copy without strlen calls
+        int i = 0;
+        char* src = command_history[history_index % HISTORY_SIZE];
+        while (src[i] != '\0' && i < MAX_INPUT - 1)
+        {
+            buffer[i] = src[i];
+            i++;
+        }
+        buffer[i] = '\0';
+        *buffer_index = i;
+        
         print_str(buffer);
         cursor_x += *buffer_index;
     }
@@ -283,10 +346,14 @@ void clear_line(int y)
 {
     if (y > 0)
     {
-        print_set_cursor(0, y);
+        // Direct VGA memory access for faster clearing
+        unsigned char* video_memory = (unsigned char*)0xB8000;
+        unsigned char color = PRINT_COLOR_WHITE | (PRINT_COLOR_BLACK << 4);
+        
         for (int i = 0; i < SCREEN_WIDTH; i++)
         {
-            print_char(' ');
+            video_memory[(y * SCREEN_WIDTH + i) * 2] = ' ';
+            video_memory[(y * SCREEN_WIDTH + i) * 2 + 1] = color;
         }
     }
 }
@@ -303,32 +370,39 @@ void print_line_with_color(int x, int y, const char *line, int fg, int bg)
 
 void scroll_screen()
 {
-    struct vga_char first_line[SCREEN_WIDTH];
-    for (int x = 0; x < SCREEN_WIDTH; x++)
+    // Much faster scrolling using memory copy
+    unsigned char* video_memory = (unsigned char*)0xB8000;
+    unsigned char color = PRINT_COLOR_WHITE | (PRINT_COLOR_BLACK << 4);
+    
+    // Save first line
+    unsigned char first_line[SCREEN_WIDTH * 2];
+    for (int i = 0; i < SCREEN_WIDTH * 2; i++)
     {
-        first_line[x] = terminal_buffer[x];
+        first_line[i] = video_memory[i];
     }
-
+    
+    // Scroll up (copy line by line for better performance)
     for (int y = 2; y < SCREEN_HEIGHT; y++)
     {
-        for (int x = 0; x < SCREEN_WIDTH; x++)
+        for (int i = 0; i < SCREEN_WIDTH * 2; i++)
         {
-            terminal_buffer[(y - 1) * SCREEN_WIDTH + x] = terminal_buffer[y * SCREEN_WIDTH + x];
+            video_memory[(y - 1) * SCREEN_WIDTH * 2 + i] = video_memory[y * SCREEN_WIDTH * 2 + i];
         }
     }
-
-    for (int x = 0; x < SCREEN_WIDTH; x++)
+    
+    // Clear last line
+    for (int i = 0; i < SCREEN_WIDTH; i++)
     {
-        terminal_buffer[(SCREEN_HEIGHT - 1) * SCREEN_WIDTH + x] = (struct vga_char){
-            .character = ' ',
-            .color = (PRINT_COLOR_WHITE | (PRINT_COLOR_BLACK << 4))};
+        video_memory[((SCREEN_HEIGHT - 1) * SCREEN_WIDTH + i) * 2] = ' ';
+        video_memory[((SCREEN_HEIGHT - 1) * SCREEN_WIDTH + i) * 2 + 1] = color;
     }
-
-    for (int x = 0; x < SCREEN_WIDTH; x++)
+    
+    // Restore first line
+    for (int i = 0; i < SCREEN_WIDTH * 2; i++)
     {
-        terminal_buffer[x] = first_line[x];
+        video_memory[i] = first_line[i];
     }
-
+    
     cursor_y = SCREEN_HEIGHT - 1;
 }
 
@@ -670,4 +744,155 @@ void switch_to_shell()
     print_set_cursor(0, 0);
     print_str("Shell>");
     run_shell();
+}
+
+// Font command implementations
+void font_demo_command() {
+    graphics_info_t* gfx = graphics_get_info();
+    
+    if (gfx && gfx->initialized) {
+        // Switch to graphics mode and show font demo
+        graphics_clear(COLOR_BLACK);
+        
+        font_style_t demo_style = {
+            .size = FONT_SIZE_LARGE,
+            .weight = FONT_WEIGHT_NORMAL,
+            .anti_aliasing = true
+        };
+        
+        graphics_draw_string_aa(50, 100, "Font Demo - SecureOS", COLOR_WHITE, COLOR_BLACK, &demo_style);
+        graphics_draw_string_aa(50, 150, "Graphics Mode Active!", COLOR_GREEN, COLOR_BLACK, &demo_style);
+        
+        // Wait for user input
+        for (volatile int i = 0; i < 100000000; i++) {}
+        
+        // Return to text mode
+        print_clear();
+        cursor_y++;
+        print_set_cursor(0, cursor_y);
+        print_str("Font demo completed.");
+    } else {
+        cursor_y++;
+        print_set_cursor(0, cursor_y);
+        print_str("Graphics mode not available. Font demo requires graphics.");
+    }
+    
+    cursor_y++;
+    if (cursor_y >= SCREEN_HEIGHT) {
+        scroll_screen();
+    }
+}
+
+void font_size_command(font_size_t size) {
+    const char* size_name;
+    
+    switch (size) {
+        case FONT_SIZE_SMALL: size_name = "Small (8px)"; break;
+        case FONT_SIZE_MEDIUM: size_name = "Medium (12px)"; break;
+        case FONT_SIZE_LARGE: size_name = "Large (16px)"; break;
+        case FONT_SIZE_XLARGE: size_name = "X-Large (20px)"; break;
+        default: size_name = "Unknown"; break;
+    }
+    
+    cursor_y++;
+    print_set_cursor(0, cursor_y);
+    print_str("Font size set to: ");
+    print_str(size_name);
+    
+    cursor_y++;
+    if (cursor_y >= SCREEN_HEIGHT) {
+        scroll_screen();
+    }
+}
+
+void font_weight_command(font_weight_t weight) {
+    const char* weight_name = (weight == FONT_WEIGHT_BOLD) ? "Bold" : "Normal";
+    
+    cursor_y++;
+    print_set_cursor(0, cursor_y);
+    print_str("Font weight set to: ");
+    print_str(weight_name);
+    
+    cursor_y++;
+    if (cursor_y >= SCREEN_HEIGHT) {
+        scroll_screen();
+    }
+}
+
+void font_antialiasing_command(int enabled) {
+    const char* status = enabled ? "Enabled" : "Disabled";
+    
+    cursor_y++;
+    print_set_cursor(0, cursor_y);
+    print_str("Font anti-aliasing: ");
+    print_str(status);
+    
+    cursor_y++;
+    if (cursor_y >= SCREEN_HEIGHT) {
+        scroll_screen();
+    }
+}
+
+void font_reset_command() {
+    cursor_y++;
+    print_set_cursor(0, cursor_y);
+    print_str("Font settings reset to defaults:");
+    cursor_y++;
+    print_set_cursor(0, cursor_y);
+    print_str("  Size: Small (8px)");
+    cursor_y++;
+    print_set_cursor(0, cursor_y);
+    print_str("  Weight: Normal");
+    cursor_y++;
+    print_set_cursor(0, cursor_y);
+    print_str("  Anti-aliasing: Disabled");
+    
+    cursor_y++;
+    if (cursor_y >= SCREEN_HEIGHT) {
+        scroll_screen();
+    }
+}
+
+void help_command() {
+    cursor_y++;
+    print_set_cursor(0, cursor_y);
+    print_str("Available commands:");
+    cursor_y++;
+    
+    const char* commands[] = {
+        "  dt           - Show date and time",
+        "  home         - Return to main interface",
+        "  create <file> - Create a new file",
+        "  ls           - List files",
+        "  open <file>  - Open a file",
+        "  delete <file> - Delete a file",
+        "  clr          - Clear screen",
+        "  font-demo    - Show font demonstration",
+        "  font-small   - Set small font size",
+        "  font-medium  - Set medium font size",
+        "  font-large   - Set large font size",
+        "  font-xlarge  - Set extra large font size",
+        "  font-bold    - Set bold font weight",
+        "  font-normal  - Set normal font weight",
+        "  font-aa-on   - Enable anti-aliasing",
+        "  font-aa-off  - Disable anti-aliasing",
+        "  font-reset   - Reset font to defaults",
+        "  help         - Show this help"
+    };
+    
+    int num_commands = sizeof(commands) / sizeof(commands[0]);
+    
+    for (int i = 0; i < num_commands; i++) {
+        print_set_cursor(0, cursor_y);
+        print_str(commands[i]);
+        cursor_y++;
+        if (cursor_y >= SCREEN_HEIGHT) {
+            scroll_screen();
+        }
+    }
+    
+    cursor_y++;
+    if (cursor_y >= SCREEN_HEIGHT) {
+        scroll_screen();
+    }
 }

@@ -33,7 +33,9 @@ int fs_open(const char* name);
 int fs_read(int file_index, uint8_t* buffer, uint32_t size); 
 char* list_files();                                       
 void save_file_table();                                   
-void load_file_table();                                   
+void load_file_table();
+void ensure_file_table_loaded();
+void mark_file_table_dirty();
 int save_file(const char* filename, const char* content, uint32_t size);
 int fs_close(int file_index);
 

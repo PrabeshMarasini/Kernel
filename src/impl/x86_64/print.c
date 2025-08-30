@@ -127,12 +127,12 @@ char print_get_char(int x, int y) {
 }
 
 static void outb(unsigned short port, unsigned char val) {
-    asm volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
+    asm volatile ("outb %0, %1" : : "a"(val), "Nd"(port) : "memory");
 }
 
 static unsigned char inb(unsigned short port) {
     unsigned char ret;
-    asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
+    asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port) : "memory");
     return ret;
 }
 

@@ -22,8 +22,11 @@ e1000_object_files := $(patsubst src/drivers/net/e1000/%.c, build/drivers/net/e1
 disk_source_files := src/drivers/diskdriver/disk.c
 disk_object_files := build/drivers/diskdriver/disk.o
 
+graphics_source_files := $(shell find src/drivers/graphics -name *.c)
+graphics_object_files := $(patsubst src/drivers/graphics/%.c, build/drivers/graphics/%.o, $(graphics_source_files))
+
 x86_64_object_files := $(x86_64_c_object_files) $(x86_64_asm_object_files)
-all_object_files := $(kernel_object_files) $(x86_64_object_files) $(shell_object_files) $(keyboard_object_files) $(textfile_object_files) $(filesystem_object_files) $(memory_object_files) $(datetime_object_files) $(e1000_object_files) $(disk_object_files)
+all_object_files := $(kernel_object_files) $(x86_64_object_files) $(shell_object_files) $(keyboard_object_files) $(textfile_object_files) $(filesystem_object_files) $(memory_object_files) $(datetime_object_files) $(e1000_object_files) $(disk_object_files) $(graphics_object_files)
 
 build/kernel/%.o: src/impl/kernel/%.c
 	mkdir -p $(dir $@)
@@ -65,6 +68,10 @@ build/drivers/diskdriver/%.o: src/drivers/diskdriver/%.c
 	mkdir -p $(dir $@)
 	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
 
+build/drivers/graphics/%.o: src/drivers/graphics/%.c
+	mkdir -p $(dir $@)
+	x86_64-elf-gcc -c -I src/intf -ffreestanding $< -o $@
+
 build/x86_64/%.o: src/impl/x86_64/%.asm
 	mkdir -p $(dir $@)
 	nasm -f elf64 $< -o $@
@@ -90,7 +97,9 @@ run: build-x86_64 create-disk
 		-d int \
 		-cdrom dist/x86_64/kernel.iso \
 		-hda $(DISK_IMG) \
-		-D qemu.log
+		-D qemu.log \
+		-vga std \
+		-display sdl
 
 create-disk:
 	@if [ ! -f $(DISK_IMG) ]; then \

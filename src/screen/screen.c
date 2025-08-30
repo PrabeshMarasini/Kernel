@@ -1,4 +1,5 @@
 #include "screen.h"
+#include "../drivers/graphics/graphics.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -20,11 +21,29 @@ Screen* screen_init(void) {
 }
 
 void screen_detect_size(Screen* screen) {
+    // Get actual graphics info instead of random
+    graphics_info_t* gfx = graphics_get_info();
     
-    uint8_t detected_size = rand() % 4;
-    screen->width = screen_sizes[detected_size][0];
-    screen->height = screen_sizes[detected_size][1];
-    screen->size_type = detected_size;
+    if (gfx && gfx->initialized) {
+        screen->width = gfx->width;
+        screen->height = gfx->height;
+        
+        // Determine size type based on resolution
+        if (screen->width <= 320) {
+            screen->size_type = SCREEN_SIZE_SMALL;
+        } else if (screen->width <= 640) {
+            screen->size_type = SCREEN_SIZE_MEDIUM;
+        } else if (screen->width <= 1024) {
+            screen->size_type = SCREEN_SIZE_LARGE;
+        } else {
+            screen->size_type = SCREEN_SIZE_XLARGE;
+        }
+    } else {
+        // Fallback to default if graphics not initialized
+        screen->width = 1024;
+        screen->height = 768;
+        screen->size_type = SCREEN_SIZE_LARGE;
+    }
 }
 
 const char* screen_get_size_name(const Screen* screen) {
