@@ -2,7 +2,7 @@
 
 ## Project Description
 
-SecureOS v2.0 is a custom x86_64 kernel implementation written in C and assembly. This bare-metal operating system features advanced capabilities including memory management, device drivers, file systems, graphics rendering with anti-aliased fonts. The kernel provides a command-line interface with a built-in shell and several utility applications.
+This is a custom x86_64 kernel implementation written in C and assembly. This bare-metal operating system features advanced capabilities including memory management, device drivers, file systems, graphics rendering with anti-aliased fonts. The kernel provides a command-line interface with a built-in shell and several utility applications.
 
 ## Prerequisites
 
